@@ -1,0 +1,12 @@
+{
+  "name": "square",
+  "params": [{"name": "x", "type": "i32"}],
+  "return_type": "i32",
+  "example_rust": "pub fn square(x: i32) -> i32 { return (x * x); }",
+  "test_cases": [
+    {"inputs": ["0"], "expected_output": "0"},
+    {"inputs": ["1"], "expected_output": "1"},
+    {"inputs": ["3"], "expected_output": "9"},
+    {"inputs": ["-2"], "expected_output": "4"}
+  ]
+}

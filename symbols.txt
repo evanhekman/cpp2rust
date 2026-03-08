@@ -1,0 +1,9 @@
+# Integer literals
+0
+1
+2
+3
+-1
+# Boolean literals
+true
+false

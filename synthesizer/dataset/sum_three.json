@@ -1,0 +1,12 @@
+{
+  "name": "sum_three",
+  "params": [{"name": "a", "type": "i32"}, {"name": "b", "type": "i32"}, {"name": "c", "type": "i32"}],
+  "return_type": "i32",
+  "example_rust": "pub fn sum_three(a: i32, b: i32, c: i32) -> i32 { return ((a + b) + c); }",
+  "test_cases": [
+    {"inputs": ["1", "2", "3"], "expected_output": "6"},
+    {"inputs": ["0", "0", "0"], "expected_output": "0"},
+    {"inputs": ["1", "1", "1"], "expected_output": "3"},
+    {"inputs": ["-1", "1", "0"], "expected_output": "0"}
+  ]
+}

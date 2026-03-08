@@ -1,0 +1,12 @@
+{
+  "name": "abs_val",
+  "params": [{"name": "x", "type": "i32"}],
+  "return_type": "i32",
+  "example_rust": "pub fn abs_val(x: i32) -> i32 { if (x < 0) { return (0 - x); } else { return x; } }",
+  "test_cases": [
+    {"inputs": ["0"], "expected_output": "0"},
+    {"inputs": ["3"], "expected_output": "3"},
+    {"inputs": ["-3"], "expected_output": "3"},
+    {"inputs": ["-5"], "expected_output": "5"}
+  ]
+}
