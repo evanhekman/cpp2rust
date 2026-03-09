@@ -33,10 +33,8 @@ def load_target(dataset_dir: str, name: str) -> Dict[str, Any]:
 
 
 def build_target_grammar(target: Dict[str, Any], literals: List[str]):
-    """Build a grammar for a specific target, with its param idents injected."""
-    params = target.get("params", [])
-    idents = [p["name"] for p in params]
-    return build_grammar(literals, idents)
+    """Build a typed grammar for a specific target."""
+    return build_grammar(literals, target.get("params", []), target.get("return_type", "i32"))
 
 
 def make_fn_def_known(target: Dict[str, Any]) -> str:

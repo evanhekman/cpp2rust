@@ -8,7 +8,7 @@ import signal
 import sys
 import time
 
-from synthesizer.ast_nodes import HOLE, ASTNode
+from synthesizer.ast_nodes import ASTNode, Hole
 from synthesizer.codegen import render
 from synthesizer.evaluator import test_candidate
 from synthesizer.expander import nonterminal_at_path
@@ -51,7 +51,7 @@ def synthesize_target(target, literals, max_depth, timeout):
     candidates_possible = count_programs(grammar, kind, max_depth)
 
     worklist = Worklist()
-    root = ASTNode(kind=kind, children=[HOLE], depth=0)
+    root = ASTNode(kind=kind, children=[Hole("Block")], depth=0)
     worklist.push(root)
 
     deadline = time.time() + timeout
@@ -85,7 +85,7 @@ def synthesize_target(target, literals, max_depth, timeout):
         hole_depth = len(path)
 
         try:
-            nt = nonterminal_at_path(partial, path, grammar)
+            nt = nonterminal_at_path(partial, path)
         except Exception:
             continue
 
@@ -99,7 +99,7 @@ def synthesize_target(target, literals, max_depth, timeout):
         nodes_expanded += 1
 
         for prod in prods:
-            new_children = [HOLE] * len(prod.children_spec)
+            new_children = [Hole(child_nt) for child_nt in prod.children_spec]
             replacement = ASTNode(
                 kind=prod.name, children=new_children, depth=hole_depth + 1
             )
