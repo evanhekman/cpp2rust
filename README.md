@@ -12,3 +12,10 @@
 - `clippy` recommended linter (`cargo clippy --fix` to apply formatting), comes preinstalled with rust
 - work on branches, PRs when applicable
 - no AI-generated markdown files
+
+### todo
+- write c++ static analysis portion that handles three types of pointers
+  - non-nullable pointer -> &T
+  - nullable pointer -> Option<&T>
+  - output pointer (changing the pointer is part of the point of the function) -> ...difficult
+- fix dataset0 performance - currently generating spurious solutions for many examples
