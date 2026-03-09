@@ -14,8 +14,8 @@ mod loader;
 mod codegen;
 
 use ast::{Node, Child};
-use grammar::{build_grammar, register_fn_def_known, count_programs, find_production};
-use eval::{eval_fn, Value};
+use grammar::{build_grammar, register_fn_def_known, count_programs};
+use eval::eval_fn;
 use worklist::Worklist;
 use heuristics::score;
 use canonicalize::should_prune;

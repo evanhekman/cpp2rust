@@ -1,4 +1,3 @@
-use std::fmt;
 
 pub type Path = Vec<usize>;
 

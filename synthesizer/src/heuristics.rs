@@ -2,10 +2,10 @@ use std::collections::HashMap;
 use crate::ast::{Node, Child};
 
 pub fn score(node: &Node) -> i64 {
-    let mut cost = 0i64;
+    
     // cost += h_operator_reuse(node);
     // cost += h_duplicate_arg(node);
-    cost
+    0i64
 }
 
 pub fn h_operator_reuse(node: &Node) -> i64 {
