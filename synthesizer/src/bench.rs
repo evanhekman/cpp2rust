@@ -11,7 +11,7 @@ use std::time::Instant;
 struct Cli {
     #[arg(long, default_value = "synthesizer/dataset")]
     dataset: PathBuf,
-    #[arg(long, default_value = "symbols.txt")]
+    #[arg(long, default_value = "synthesizer/symbols.txt")]
     symbols: PathBuf,
     #[arg(long, default_value_t = 8)]
     max_depth: usize,
@@ -25,15 +25,34 @@ struct Cli {
 }
 
 fn synth_binary() -> PathBuf {
-    // Look for release binary next to bench, then debug
     let exe = std::env::current_exe().unwrap();
-    let dir = exe.parent().unwrap();
-    let release = dir.join("synth");
-    if release.exists() {
-        release
-    } else {
-        dir.join("synth")
+    exe.parent().unwrap().join("synth")
+}
+
+/// Find the project root by looking for symbols.txt, searching from cwd
+/// then from the binary's location upward. Works whether invoked from
+/// the project root or from inside synthesizer/.
+fn project_root() -> PathBuf {
+    let from_binary = std::env::current_exe()
+        .unwrap()
+        .parent()
+        .unwrap() // target/release
+        .parent()
+        .unwrap() // target
+        .parent()
+        .unwrap() // synthesizer
+        .parent()
+        .unwrap() // project root
+        .to_path_buf();
+
+    let from_cwd = std::env::current_dir().unwrap();
+
+    for dir in [&from_cwd, &from_binary] {
+        if dir.join("synthesizer/symbols.txt").exists() {
+            return dir.clone();
+        }
     }
+    from_cwd
 }
 
 struct RunResult {
@@ -81,7 +100,16 @@ fn list_targets(dataset: &PathBuf) -> Vec<String> {
 }
 
 fn main() {
-    let cli = Cli::parse();
+    let mut cli = Cli::parse();
+    let root = project_root();
+
+    if cli.dataset == PathBuf::from("synthesizer/dataset") {
+        cli.dataset = root.join("synthesizer/dataset");
+    }
+    if cli.symbols == PathBuf::from("synthesizer/symbols.txt") {
+        cli.symbols = root.join("synthesizer/symbols.txt");
+    }
+
     let binary = synth_binary();
     let targets = if cli.targets.is_empty() {
         list_targets(&cli.dataset)

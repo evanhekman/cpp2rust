@@ -25,7 +25,7 @@ use worklist::Worklist;
 #[derive(Parser)]
 #[command(name = "synth", about = "Rust Program Synthesizer")]
 struct Cli {
-    #[arg(long, default_value = "symbols.txt")]
+    #[arg(long, default_value = "synthesizer/symbols.txt")]
     symbols: PathBuf,
     #[arg(long, default_value = "synthesizer/dataset")]
     dataset: PathBuf,
@@ -153,8 +153,37 @@ fn synthesize(
     None
 }
 
+fn project_root() -> std::path::PathBuf {
+    let from_binary = std::env::current_exe()
+        .unwrap()
+        .parent()
+        .unwrap() // target/release
+        .parent()
+        .unwrap() // target
+        .parent()
+        .unwrap() // synthesizer
+        .parent()
+        .unwrap() // project root
+        .to_path_buf();
+    let from_cwd = std::env::current_dir().unwrap();
+    for dir in [&from_cwd, &from_binary] {
+        if dir.join("synthesizer/symbols.txt").exists() {
+            return dir.clone();
+        }
+    }
+    from_cwd
+}
+
 fn main() {
-    let cli = Cli::parse();
+    let mut cli = Cli::parse();
+    let root = project_root();
+
+    if cli.symbols == PathBuf::from("synthesizer/symbols.txt") {
+        cli.symbols = root.join("synthesizer/symbols.txt");
+    }
+    if cli.dataset == PathBuf::from("synthesizer/dataset") {
+        cli.dataset = root.join("synthesizer/dataset");
+    }
 
     let interrupted = Arc::new(AtomicBool::new(false));
     let interrupted_clone = interrupted.clone();
