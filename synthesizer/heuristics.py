@@ -14,8 +14,8 @@ def score(node: ASTNode) -> int:
     Comment/uncomment heuristic lines below to test different combinations.
     """
     cost = 0
-    cost += h_operator_reuse(node)  # +1 unique op, +2 duplicate op
-    cost += h_duplicate_arg(node)  # +1 for binary op with identical children
+    # cost += h_operator_reuse(node)  # +1 unique op, +2 duplicate op
+    # cost += h_duplicate_arg(node)  # +1 for binary op with identical children
     return cost
 
 

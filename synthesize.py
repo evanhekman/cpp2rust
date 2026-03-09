@@ -11,6 +11,7 @@ import time
 from synthesizer.ast_nodes import ASTNode, Hole
 from synthesizer.codegen import render
 from synthesizer.evaluator import test_candidate
+from synthesizer.canonicalize import should_prune
 from synthesizer.expander import nonterminal_at_path
 from synthesizer.heuristics import score
 from synthesizer.loader import (
@@ -104,6 +105,8 @@ def synthesize_target(target, literals, max_depth, timeout):
             replacement = ASTNode(
                 kind=prod.name, children=new_children, depth=hole_depth + 1
             )
+            if should_prune(partial, path, replacement):
+                continue
             new_partial = partial.replace_at_path(path, replacement)
             worklist.push(new_partial, score(new_partial))
 
