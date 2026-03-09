@@ -8,8 +8,10 @@ from .codegen import wrap_in_harness
 COMPILE_TIMEOUT = 10
 RUN_TIMEOUT = 5
 
+
 class CompilationError(Exception):
     pass
+
 
 def test_candidate(
     fn_src: str,
@@ -17,23 +19,24 @@ def test_candidate(
     test_cases: List[Dict[str, Any]],
 ) -> bool:
     """
-    Compile fn_src as a Rust program and run it against all test cases.
-    Returns True if all test cases pass, False otherwise.
-    Silently discards compilation errors.
+    Compile fn_src once, run it once, and check all test case outputs.
+    Returns True if all outputs match. Silently discards compilation errors.
     """
-    for tc in test_cases:
-        inputs = tc["inputs"]
-        expected = tc["expected_output"]
-        harness = wrap_in_harness(fn_src, fn_name, inputs)
-        try:
-            actual = _compile_and_run(harness)
-        except CompilationError:
-            return False
-        except subprocess.TimeoutExpired:
-            return False
-        if actual.strip() != str(expected).strip():
-            return False
-    return True
+    harness = wrap_in_harness(fn_src, fn_name, test_cases)
+    try:
+        stdout = _compile_and_run(harness)
+    except (CompilationError, subprocess.TimeoutExpired):
+        return False
+
+    lines = stdout.splitlines()
+    if len(lines) != len(test_cases):
+        return False
+
+    return all(
+        line.strip() == str(tc["expected_output"]).strip()
+        for line, tc in zip(lines, test_cases)
+    )
+
 
 def _compile_and_run(src: str) -> str:
     with tempfile.TemporaryDirectory() as tmpdir:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 from .ast_nodes import ASTNode, Hole
 from .grammar import Production
-from typing import Dict, List
+from typing import Dict, List, Any
 
 
 def render(node: ASTNode, grammar: Dict[str, List[Production]]) -> str:
@@ -22,14 +22,19 @@ def render(node: ASTNode, grammar: Dict[str, List[Production]]) -> str:
     return prod.rust_template.format(*rendered_children)
 
 
-def wrap_in_harness(fn_src: str, fn_name: str, inputs: List[str]) -> str:
-    """Wrap function source in a main() that calls it with given inputs and prints result."""
-    args = ", ".join(inputs)
+def wrap_in_harness(fn_src: str, fn_name: str, test_cases: List[Dict]) -> str:
+    """
+    Wrap function source in a main() that runs all test cases in one binary.
+    Each call prints its result on a separate line.
+    """
+    calls = "\n".join(
+        f'    println!("{{:?}}", {fn_name}({", ".join(tc["inputs"])}));'
+        for tc in test_cases
+    )
     return f"""{fn_src}
 
 fn main() {{
-    let result = {fn_name}({args});
-    println!("{{:?}}", result);
+{calls}
 }}
 """
 
