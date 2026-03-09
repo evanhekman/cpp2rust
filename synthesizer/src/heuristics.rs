@@ -1,8 +1,7 @@
+use crate::ast::{Child, Node};
 use std::collections::HashMap;
-use crate::ast::{Node, Child};
 
-pub fn score(node: &Node) -> i64 {
-    
+pub fn score(_node: &Node) -> i64 {
     // cost += h_operator_reuse(node);
     // cost += h_duplicate_arg(node);
     0i64
@@ -11,7 +10,10 @@ pub fn score(node: &Node) -> i64 {
 pub fn h_operator_reuse(node: &Node) -> i64 {
     let mut counts: HashMap<&str, usize> = HashMap::new();
     collect_operators(node, &mut counts);
-    counts.values().map(|&c| if c == 1 { 1i64 } else { 2 * c as i64 }).sum()
+    counts
+        .values()
+        .map(|&c| if c == 1 { 1i64 } else { 2 * c as i64 })
+        .sum()
 }
 
 pub fn h_duplicate_arg(node: &Node) -> i64 {
@@ -19,9 +21,13 @@ pub fn h_duplicate_arg(node: &Node) -> i64 {
 }
 
 fn collect_operators<'a>(node: &'a Node, counts: &mut HashMap<&'a str, usize>) {
-    if is_operator(node) { *counts.entry(&node.kind).or_default() += 1; }
+    if is_operator(node) {
+        *counts.entry(&node.kind).or_default() += 1;
+    }
     for child in &node.children {
-        if let Child::Node(n) = child { collect_operators(n, counts); }
+        if let Child::Node(n) = child {
+            collect_operators(n, counts);
+        }
     }
 }
 
@@ -39,16 +45,23 @@ fn duplicate_arg_penalty(node: &Node) -> i64 {
         }
     }
     for child in &node.children {
-        if let Child::Node(n) = child { penalty += duplicate_arg_penalty(n); }
+        if let Child::Node(n) = child {
+            penalty += duplicate_arg_penalty(n);
+        }
     }
     penalty
 }
 
 fn structurally_equal(a: &Node, b: &Node) -> bool {
-    if a.kind != b.kind || a.children.len() != b.children.len() { return false; }
-    a.children.iter().zip(b.children.iter()).all(|(ca, cb)| match (ca, cb) {
-        (Child::Node(na), Child::Node(nb)) => structurally_equal(na, nb),
-        (Child::Hole(a), Child::Hole(b)) => a == b,
-        _ => false,
-    })
+    if a.kind != b.kind || a.children.len() != b.children.len() {
+        return false;
+    }
+    a.children
+        .iter()
+        .zip(b.children.iter())
+        .all(|(ca, cb)| match (ca, cb) {
+            (Child::Node(na), Child::Node(nb)) => structurally_equal(na, nb),
+            (Child::Hole(a), Child::Hole(b)) => a == b,
+            _ => false,
+        })
 }

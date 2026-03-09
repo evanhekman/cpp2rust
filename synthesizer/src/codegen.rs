@@ -1,5 +1,5 @@
-use crate::ast::{Node, Child};
-use crate::grammar::{Grammar, find_production};
+use crate::ast::{Child, Node};
+use crate::grammar::{find_production, Grammar};
 
 pub fn render(node: &Node, grammar: &Grammar) -> Result<String, String> {
     let prod = find_production(&node.kind, grammar)
@@ -7,10 +7,14 @@ pub fn render(node: &Node, grammar: &Grammar) -> Result<String, String> {
     if prod.children_spec.is_empty() {
         return Ok(prod.rust_template.clone());
     }
-    let parts: Result<Vec<String>, String> = node.children.iter().map(|c| match c {
-        Child::Node(n) => render(n, grammar),
-        Child::Hole(nt) => Ok(format!("???:{}", nt)),
-    }).collect();
+    let parts: Result<Vec<String>, String> = node
+        .children
+        .iter()
+        .map(|c| match c {
+            Child::Node(n) => render(n, grammar),
+            Child::Hole(nt) => Ok(format!("???:{}", nt)),
+        })
+        .collect();
     Ok(format_template(&prod.rust_template, &parts?))
 }
 

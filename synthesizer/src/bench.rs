@@ -1,10 +1,13 @@
+use clap::Parser;
 use std::path::PathBuf;
 use std::process::Command;
 use std::time::Instant;
-use clap::Parser;
 
 #[derive(Parser)]
-#[command(name = "bench", about = "Benchmark the Rust synthesizer across targets")]
+#[command(
+    name = "bench",
+    about = "Benchmark the Rust synthesizer across targets"
+)]
 struct Cli {
     #[arg(long, default_value = "synthesizer/dataset")]
     dataset: PathBuf,
@@ -26,7 +29,11 @@ fn synth_binary() -> PathBuf {
     let exe = std::env::current_exe().unwrap();
     let dir = exe.parent().unwrap();
     let release = dir.join("synth");
-    if release.exists() { release } else { dir.join("synth") }
+    if release.exists() {
+        release
+    } else {
+        dir.join("synth")
+    }
 }
 
 struct RunResult {
@@ -38,17 +45,25 @@ fn run_once(binary: &PathBuf, target: &str, cli: &Cli) -> RunResult {
     let t0 = Instant::now();
     let output = Command::new(binary)
         .args([
-            "--target", target,
-            "--max-depth", &cli.max_depth.to_string(),
-            "--timeout", &cli.timeout.to_string(),
-            "--dataset", cli.dataset.to_str().unwrap(),
-            "--symbols", cli.symbols.to_str().unwrap(),
+            "--target",
+            target,
+            "--max-depth",
+            &cli.max_depth.to_string(),
+            "--timeout",
+            &cli.timeout.to_string(),
+            "--dataset",
+            cli.dataset.to_str().unwrap(),
+            "--symbols",
+            cli.symbols.to_str().unwrap(),
         ])
         .output()
         .expect("failed to run synth binary");
     let elapsed = t0.elapsed().as_secs_f64();
     let stdout = String::from_utf8_lossy(&output.stdout);
-    RunResult { elapsed, found: stdout.contains("FOUND") }
+    RunResult {
+        elapsed,
+        found: stdout.contains("FOUND"),
+    }
 }
 
 fn list_targets(dataset: &PathBuf) -> Vec<String> {
@@ -57,7 +72,8 @@ fn list_targets(dataset: &PathBuf) -> Vec<String> {
         .filter_map(|e| {
             let e = e.ok()?;
             let name = e.file_name().into_string().ok()?;
-            name.ends_with(".json").then(|| name[..name.len() - 5].to_string())
+            name.ends_with(".json")
+                .then(|| name[..name.len() - 5].to_string())
         })
         .collect();
     names.sort();
@@ -73,10 +89,22 @@ fn main() {
         cli.targets.clone()
     };
 
-    println!("Benchmarking {} targets, {} run(s) each", targets.len(), cli.runs);
-    println!("max-depth={}  timeout={}s  binary={}", cli.max_depth, cli.timeout, binary.display());
+    println!(
+        "Benchmarking {} targets, {} run(s) each",
+        targets.len(),
+        cli.runs
+    );
+    println!(
+        "max-depth={}  timeout={}s  binary={}",
+        cli.max_depth,
+        cli.timeout,
+        binary.display()
+    );
     println!();
-    println!("{:<16} {:<8} {:>8} {:>8} {:>8}", "target", "status", "mean", "min", "max");
+    println!(
+        "{:<16} {:<8} {:>8} {:>8} {:>8}",
+        "target", "status", "mean", "min", "max"
+    );
     println!("{}", "-".repeat(52));
 
     let mut solved = 0usize;
@@ -94,8 +122,14 @@ fn main() {
         let min = times.iter().cloned().fold(f64::INFINITY, f64::min);
         let max = times.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
         let status = if found { "FOUND" } else { "TIMEOUT" };
-        println!("{:<16} {:<8} {:>7.2}s {:>7.2}s {:>7.2}s", target, status, mean, min, max);
-        if found { solved += 1; solved_times.push(mean); }
+        println!(
+            "{:<16} {:<8} {:>7.2}s {:>7.2}s {:>7.2}s",
+            target, status, mean, min, max
+        );
+        if found {
+            solved += 1;
+            solved_times.push(mean);
+        }
     }
 
     println!();

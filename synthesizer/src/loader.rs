@@ -1,6 +1,6 @@
+use crate::eval::Value;
 use serde::Deserialize;
 use std::path::Path;
-use crate::eval::Value;
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct Param {
@@ -28,15 +28,23 @@ pub fn load_target(dataset_dir: &Path, name: &str) -> Result<Target, String> {
     let path = dataset_dir.join(format!("{}.json", name));
     if !path.exists() {
         let available: Vec<String> = std::fs::read_dir(dataset_dir)
-            .map(|rd| rd.filter_map(|e| {
-                let e = e.ok()?;
-                let n = e.file_name().into_string().ok()?;
-                n.ends_with(".json").then(|| n[..n.len()-5].to_string())
-            }).collect())
+            .map(|rd| {
+                rd.filter_map(|e| {
+                    let e = e.ok()?;
+                    let n = e.file_name().into_string().ok()?;
+                    n.ends_with(".json").then(|| n[..n.len() - 5].to_string())
+                })
+                .collect()
+            })
             .unwrap_or_default();
         let mut available = available;
         available.sort();
-        return Err(format!("Target '{}' not found in {:?}\nAvailable: {}", name, dataset_dir, available.join(", ")));
+        return Err(format!(
+            "Target '{}' not found in {:?}\nAvailable: {}",
+            name,
+            dataset_dir,
+            available.join(", ")
+        ));
     }
     let text = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
     serde_json::from_str(&text).map_err(|e| e.to_string())
@@ -44,7 +52,8 @@ pub fn load_target(dataset_dir: &Path, name: &str) -> Result<Target, String> {
 
 pub fn load_symbols(path: &Path) -> Result<Vec<String>, String> {
     let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-    Ok(text.lines()
+    Ok(text
+        .lines()
         .map(|l| l.trim())
         .filter(|l| !l.is_empty() && !l.starts_with('#'))
         .map(|l| l.to_string())
@@ -52,11 +61,15 @@ pub fn load_symbols(path: &Path) -> Result<Vec<String>, String> {
 }
 
 pub fn parse_env(test_case: &TestCase, params: &[Param]) -> crate::eval::Env {
-    params.iter().zip(test_case.inputs.iter()).map(|(param, input)| {
-        let val = match param.ty.as_str() {
-            "bool" => Value::Bool(input == "true"),
-            _ => Value::Int(input.parse::<i32>().expect("invalid i32 input")),
-        };
-        (param.name.clone(), val)
-    }).collect()
+    params
+        .iter()
+        .zip(test_case.inputs.iter())
+        .map(|(param, input)| {
+            let val = match param.ty.as_str() {
+                "bool" => Value::Bool(input == "true"),
+                _ => Value::Int(input.parse::<i32>().expect("invalid i32 input")),
+            };
+            (param.name.clone(), val)
+        })
+        .collect()
 }

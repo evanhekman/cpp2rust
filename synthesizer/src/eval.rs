@@ -1,5 +1,5 @@
 use crate::ast::{Child, Node};
-use crate::grammar::{Grammar, find_production};
+use crate::grammar::{find_production, Grammar};
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -10,10 +10,16 @@ pub enum Value {
 
 impl Value {
     pub fn as_int(&self) -> Result<i32, EvalError> {
-        match self { Value::Int(n) => Ok(*n), _ => Err(EvalError::TypeError) }
+        match self {
+            Value::Int(n) => Ok(*n),
+            _ => Err(EvalError::TypeError),
+        }
     }
     pub fn as_bool(&self) -> Result<bool, EvalError> {
-        match self { Value::Bool(b) => Ok(*b), _ => Err(EvalError::TypeError) }
+        match self {
+            Value::Bool(b) => Ok(*b),
+            _ => Err(EvalError::TypeError),
+        }
     }
     pub fn matches_str(&self, s: &str) -> bool {
         match self {
@@ -29,6 +35,7 @@ pub enum EvalError {
     DivByZero,
     Overflow,
     TypeError,
+    #[allow(dead_code)]
     UnknownKind(String),
 }
 
@@ -37,23 +44,70 @@ pub type Env = HashMap<String, Value>;
 pub fn eval(node: &Node, env: &Env, grammar: &Grammar) -> Result<Value, EvalError> {
     match node.kind.as_str() {
         // Arithmetic
-        "ExprAdd" => { let (l, r) = eval_binary_i32(node, env, grammar)?; l.checked_add(r).map(Value::Int).ok_or(EvalError::Overflow) }
-        "ExprSub" => { let (l, r) = eval_binary_i32(node, env, grammar)?; l.checked_sub(r).map(Value::Int).ok_or(EvalError::Overflow) }
-        "ExprMul" => { let (l, r) = eval_binary_i32(node, env, grammar)?; l.checked_mul(r).map(Value::Int).ok_or(EvalError::Overflow) }
-        "ExprDiv" => { let (l, r) = eval_binary_i32(node, env, grammar)?; if r == 0 { Err(EvalError::DivByZero) } else { Ok(Value::Int(l / r)) } }
-        "ExprMod" => { let (l, r) = eval_binary_i32(node, env, grammar)?; if r == 0 { Err(EvalError::DivByZero) } else { Ok(Value::Int(l % r)) } }
+        "ExprAdd" => {
+            let (l, r) = eval_binary_i32(node, env, grammar)?;
+            l.checked_add(r).map(Value::Int).ok_or(EvalError::Overflow)
+        }
+        "ExprSub" => {
+            let (l, r) = eval_binary_i32(node, env, grammar)?;
+            l.checked_sub(r).map(Value::Int).ok_or(EvalError::Overflow)
+        }
+        "ExprMul" => {
+            let (l, r) = eval_binary_i32(node, env, grammar)?;
+            l.checked_mul(r).map(Value::Int).ok_or(EvalError::Overflow)
+        }
+        "ExprDiv" => {
+            let (l, r) = eval_binary_i32(node, env, grammar)?;
+            if r == 0 {
+                Err(EvalError::DivByZero)
+            } else {
+                Ok(Value::Int(l / r))
+            }
+        }
+        "ExprMod" => {
+            let (l, r) = eval_binary_i32(node, env, grammar)?;
+            if r == 0 {
+                Err(EvalError::DivByZero)
+            } else {
+                Ok(Value::Int(l % r))
+            }
+        }
 
         // Comparisons
-        "ExprEq" => { let (l, r) = eval_binary_i32(node, env, grammar)?; Ok(Value::Bool(l == r)) }
-        "ExprNe" => { let (l, r) = eval_binary_i32(node, env, grammar)?; Ok(Value::Bool(l != r)) }
-        "ExprLt" => { let (l, r) = eval_binary_i32(node, env, grammar)?; Ok(Value::Bool(l < r)) }
-        "ExprGt" => { let (l, r) = eval_binary_i32(node, env, grammar)?; Ok(Value::Bool(l > r)) }
-        "ExprLe" => { let (l, r) = eval_binary_i32(node, env, grammar)?; Ok(Value::Bool(l <= r)) }
-        "ExprGe" => { let (l, r) = eval_binary_i32(node, env, grammar)?; Ok(Value::Bool(l >= r)) }
+        "ExprEq" => {
+            let (l, r) = eval_binary_i32(node, env, grammar)?;
+            Ok(Value::Bool(l == r))
+        }
+        "ExprNe" => {
+            let (l, r) = eval_binary_i32(node, env, grammar)?;
+            Ok(Value::Bool(l != r))
+        }
+        "ExprLt" => {
+            let (l, r) = eval_binary_i32(node, env, grammar)?;
+            Ok(Value::Bool(l < r))
+        }
+        "ExprGt" => {
+            let (l, r) = eval_binary_i32(node, env, grammar)?;
+            Ok(Value::Bool(l > r))
+        }
+        "ExprLe" => {
+            let (l, r) = eval_binary_i32(node, env, grammar)?;
+            Ok(Value::Bool(l <= r))
+        }
+        "ExprGe" => {
+            let (l, r) = eval_binary_i32(node, env, grammar)?;
+            Ok(Value::Bool(l >= r))
+        }
 
         // Logical
-        "ExprAnd" => { let (l, r) = eval_binary_bool(node, env, grammar)?; Ok(Value::Bool(l && r)) }
-        "ExprOr"  => { let (l, r) = eval_binary_bool(node, env, grammar)?; Ok(Value::Bool(l || r)) }
+        "ExprAnd" => {
+            let (l, r) = eval_binary_bool(node, env, grammar)?;
+            Ok(Value::Bool(l && r))
+        }
+        "ExprOr" => {
+            let (l, r) = eval_binary_bool(node, env, grammar)?;
+            Ok(Value::Bool(l || r))
+        }
         "ExprNot" => {
             let child = eval_child(node, 0, env, grammar)?;
             Ok(Value::Bool(!child.as_bool()?))
@@ -62,23 +116,33 @@ pub fn eval(node: &Node, env: &Env, grammar: &Grammar) -> Result<Value, EvalErro
         // If expressions
         "ExprIfElse_i32" | "ExprIfElse_bool" => {
             let cond = eval_child(node, 0, env, grammar)?.as_bool()?;
-            if cond { eval_child(node, 1, env, grammar) } else { eval_child(node, 2, env, grammar) }
+            if cond {
+                eval_child(node, 1, env, grammar)
+            } else {
+                eval_child(node, 2, env, grammar)
+            }
         }
 
         // Block / Stmt
         "BlockSingle" => eval_child(node, 0, env, grammar),
-        "StmtReturn"  => {
+        "StmtReturn" => {
             let val = eval_child(node, 0, env, grammar)?;
             Err(EvalError::Return(val))
         }
         "StmtIf" => {
             let cond = eval_child(node, 0, env, grammar)?.as_bool()?;
-            if cond { eval_child(node, 1, env, grammar)?; }
+            if cond {
+                eval_child(node, 1, env, grammar)?;
+            }
             Ok(Value::Bool(false)) // fallthrough — value unused
         }
         "StmtIfElse" => {
             let cond = eval_child(node, 0, env, grammar)?.as_bool()?;
-            if cond { eval_child(node, 1, env, grammar)?; } else { eval_child(node, 2, env, grammar)?; }
+            if cond {
+                eval_child(node, 1, env, grammar)?;
+            } else {
+                eval_child(node, 2, env, grammar)?;
+            }
             Ok(Value::Bool(false)) // fallthrough — value unused
         }
 
@@ -92,7 +156,10 @@ pub fn eval(node: &Node, env: &Env, grammar: &Grammar) -> Result<Value, EvalErro
                 // Ident: look up param name from rust_template
                 if kind.starts_with("ExprIdent_") {
                     let name = &prod.rust_template;
-                    return env.get(name).cloned().ok_or(EvalError::UnknownKind(name.clone()));
+                    return env
+                        .get(name)
+                        .cloned()
+                        .ok_or(EvalError::UnknownKind(name.clone()));
                 }
             }
             Err(EvalError::UnknownKind(kind.to_string()))
