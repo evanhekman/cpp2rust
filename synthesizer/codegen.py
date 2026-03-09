@@ -1,7 +1,7 @@
 from __future__ import annotations
 from .ast_nodes import ASTNode, Hole
 from .grammar import Production
-from typing import Dict, List, Any
+from typing import Dict, List
 
 
 def render(node: ASTNode, grammar: Dict[str, List[Production]]) -> str:
