@@ -137,7 +137,7 @@ fn synthesize(
                 continue;
             }
             let new_partial = partial.replace_at_path(&path, replacement);
-            let s = score(&new_partial);
+            let s = score(&new_partial, target.cpp_features.as_ref());
             worklist.push(new_partial, s);
         }
     }

@@ -16,11 +16,17 @@ pub struct TestCase {
 }
 
 #[derive(Deserialize, Clone, Debug)]
+pub struct CppFeatures {
+    pub operators: Vec<String>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
 pub struct Target {
     pub name: String,
     pub params: Vec<Param>,
     pub return_type: String,
     pub example_rust: Option<String>,
+    pub cpp_features: Option<CppFeatures>,
     pub test_cases: Vec<TestCase>,
 }
 

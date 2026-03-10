@@ -267,6 +267,44 @@ fn generate_test_cases(
     Ok(cases)
 }
 
+// ── C++ feature extraction ────────────────────────────────────────────────────
+
+/// Extract which Rust grammar operators are likely needed based on the C++ body.
+/// Uses prefix naming: "ExprIfElse" matches "ExprIfElse_i32", "ExprIfElse_bool", etc.
+fn extract_features(body: &str) -> Value {
+    let mut ops: Vec<&str> = Vec::new();
+
+    // Multi-char operators — check before single-char to avoid substring collisions
+    if body.contains("==") { ops.push("ExprEq"); }
+    if body.contains("!=") { ops.push("ExprNe"); }
+    if body.contains(">=") { ops.push("ExprGe"); }
+    if body.contains("<=") { ops.push("ExprLe"); }
+    if body.contains("&&") { ops.push("ExprAnd"); }
+    if body.contains("||") { ops.push("ExprOr"); }
+
+    // Single-char — use regex to avoid matching inside multi-char operators
+    if Regex::new(r">[^>=]").unwrap().is_match(body) { ops.push("ExprGt"); }
+    if Regex::new(r"<[^<=]").unwrap().is_match(body) { ops.push("ExprLt"); }
+    if body.contains('+') { ops.push("ExprAdd"); }
+    if Regex::new(r"-[^->]").unwrap().is_match(body) { ops.push("ExprSub"); }
+    if body.contains('*') { ops.push("ExprMul"); }  // accepts dereference as false positive
+    if Regex::new(r"/[^/]").unwrap().is_match(body) { ops.push("ExprDiv"); }
+    if body.contains('%') { ops.push("ExprMod"); }
+    if Regex::new(r"![^=]").unwrap().is_match(body) { ops.push("ExprNot"); }
+
+    // Control flow
+    let has_if = body.contains("if");
+    let has_else = body.contains("else");
+    if has_if && has_else {
+        ops.push("ExprIfElse");
+        ops.push("StmtIfElse");
+    } else if has_if {
+        ops.push("StmtIf");
+    }
+
+    json!({ "operators": ops })
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 fn main() {
@@ -291,11 +329,18 @@ fn main() {
         std::process::exit(1);
     });
 
+    let features = {
+        let re = Regex::new(r"(?s)\{(.*)\}").unwrap();
+        let body = re.captures(&src).and_then(|c| c.get(1)).map(|m| m.as_str()).unwrap_or(&src);
+        extract_features(body)
+    };
+
     let out = json!({
         "name": sig.name,
         "params": sig.params.iter().map(|p| json!({"name": p.name, "type": p.rust_type})).collect::<Vec<_>>(),
         "return_type": sig.ret_rust,
         "example_cpp": src.trim(),
+        "cpp_features": features,
         "test_cases": test_cases,
     });
 
