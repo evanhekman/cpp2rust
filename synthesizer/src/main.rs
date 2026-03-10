@@ -19,7 +19,7 @@ use codegen::render;
 use eval::eval_fn;
 use grammar::{build_grammar, count_programs, register_fn_def_known};
 use heuristics::score;
-use loader::{load_symbols, load_target, parse_env};
+use loader::{load_symbols, load_target, load_target_file, parse_env};
 use worklist::Worklist;
 
 #[derive(Parser)]
@@ -27,10 +27,13 @@ use worklist::Worklist;
 struct Cli {
     #[arg(long, default_value = "synthesizer/symbols.txt")]
     symbols: PathBuf,
-    #[arg(long, default_value = "synthesizer/dataset")]
+    #[arg(long, default_value = "synthesizer/dataset0")]
     dataset: PathBuf,
     #[arg(long)]
-    target: String,
+    target: Option<String>,
+    /// Direct path to a JSON target file (bypasses --dataset and --target)
+    #[arg(long)]
+    file: Option<PathBuf>,
     #[arg(long, default_value_t = 8)]
     max_depth: usize,
     #[arg(long, default_value_t = 300)]
@@ -181,8 +184,8 @@ fn main() {
     if cli.symbols == PathBuf::from("synthesizer/symbols.txt") {
         cli.symbols = root.join("synthesizer/symbols.txt");
     }
-    if cli.dataset == PathBuf::from("synthesizer/dataset") {
-        cli.dataset = root.join("synthesizer/dataset");
+    if cli.dataset == PathBuf::from("synthesizer/dataset0") {
+        cli.dataset = root.join("synthesizer/dataset0");
     }
 
     let interrupted = Arc::new(AtomicBool::new(false));
@@ -200,11 +203,19 @@ fn main() {
             std::process::exit(1);
         }
     };
-    let target = match load_target(&cli.dataset, &cli.target) {
-        Ok(t) => t,
-        Err(e) => {
-            eprintln!("Error: {}", e);
+    let target = if let Some(ref file) = cli.file {
+        match load_target_file(file) {
+            Ok(t) => t,
+            Err(e) => { eprintln!("Error: {}", e); std::process::exit(1); }
+        }
+    } else {
+        let name = cli.target.as_deref().unwrap_or_else(|| {
+            eprintln!("Error: provide --target <name> or --file <path>");
             std::process::exit(1);
+        });
+        match load_target(&cli.dataset, name) {
+            Ok(t) => t,
+            Err(e) => { eprintln!("Error: {}", e); std::process::exit(1); }
         }
     };
 

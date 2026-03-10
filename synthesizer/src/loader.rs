@@ -50,6 +50,11 @@ pub fn load_target(dataset_dir: &Path, name: &str) -> Result<Target, String> {
     serde_json::from_str(&text).map_err(|e| e.to_string())
 }
 
+pub fn load_target_file(path: &Path) -> Result<Target, String> {
+    let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+    serde_json::from_str(&text).map_err(|e| e.to_string())
+}
+
 pub fn load_symbols(path: &Path) -> Result<Vec<String>, String> {
     let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
     Ok(text

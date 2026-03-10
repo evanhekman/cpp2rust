@@ -7,6 +7,11 @@
   - `cargo build` to build, add `--release` flag for optimizations (run from synthesizer/)
   - `cargo check` to see if you have viable code without waiting for compile
   - `./target/debug/executable` or `./target/release/executable` to run
+- datasets
+  - synthesizer/dataset0 was used to test core synthesizer functionality (no c++, no heuristics, pure synthesis)
+    - very basic snippets, less than 8 nodes in the AST
+    - synthesizer does not succeed on all of them which is okay (hard problem when there is no heuristic to guide the search)
+  - synthesizer/dataset1 is basic c++ files to test using similarity heuristics to generate the rust
 
 ### rules
 - `clippy` recommended linter (`cargo clippy --fix` to apply formatting), comes preinstalled with rust

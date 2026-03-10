@@ -11,8 +11,17 @@ path = "src/main.rs"
 name = "bench"
 path = "src/bench.rs"
 
+[[bin]]
+name = "cpp2json"
+path = "src/bin/cpp2json.rs"
+
+[[bin]]
+name = "json2rust"
+path = "src/bin/json2rust.rs"
+
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 ctrlc = "3"
+regex = "1"
