@@ -1,0 +1,12 @@
+{
+  "name": "deref_add",
+  "params": [{"name": "p", "type": "&i32"}, {"name": "x", "type": "i32"}],
+  "return_type": "i32",
+  "example_rust": "pub fn deref_add(p: &i32, x: i32) -> i32 { return (p + x); }",
+  "test_cases": [
+    {"inputs": ["3", "4"], "expected_output": "7"},
+    {"inputs": ["0", "5"], "expected_output": "5"},
+    {"inputs": ["-2", "10"], "expected_output": "8"},
+    {"inputs": ["7", "-3"], "expected_output": "4"}
+  ]
+}

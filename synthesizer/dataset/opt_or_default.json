@@ -1,0 +1,12 @@
+{
+  "name": "opt_or_default",
+  "params": [{"name": "p", "type": "Option<&i32>"}, {"name": "default", "type": "i32"}],
+  "return_type": "i32",
+  "example_rust": "pub fn opt_or_default(p: Option<&i32>, default: i32) -> i32 { return p.unwrap_or(default); }",
+  "test_cases": [
+    {"inputs": ["null", "0"], "expected_output": "0"},
+    {"inputs": ["null", "7"], "expected_output": "7"},
+    {"inputs": ["5", "0"], "expected_output": "5"},
+    {"inputs": ["-3", "99"], "expected_output": "-3"}
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "deref_double",
+  "params": [{"name": "p", "type": "&i32"}],
+  "return_type": "i32",
+  "example_rust": "pub fn deref_double(p: &i32) -> i32 { return (p * 2); }",
+  "test_cases": [
+    {"inputs": ["3"], "expected_output": "6"},
+    {"inputs": ["0"], "expected_output": "0"},
+    {"inputs": ["-4"], "expected_output": "-8"},
+    {"inputs": ["7"], "expected_output": "14"}
+  ]
+}

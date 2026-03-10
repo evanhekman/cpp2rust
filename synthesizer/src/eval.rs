@@ -6,6 +6,7 @@ use std::collections::HashMap;
 pub enum Value {
     Int(i32),
     Bool(bool),
+    Opt(Option<i32>),
 }
 
 impl Value {
@@ -21,10 +22,18 @@ impl Value {
             _ => Err(EvalError::TypeError),
         }
     }
+    pub fn as_opt_i32(&self) -> Result<Option<i32>, EvalError> {
+        match self {
+            Value::Opt(o) => Ok(*o),
+            _ => Err(EvalError::TypeError),
+        }
+    }
     pub fn matches_str(&self, s: &str) -> bool {
         match self {
             Value::Int(n) => s == n.to_string(),
             Value::Bool(b) => s == (if *b { "true" } else { "false" }),
+            Value::Opt(None) => s == "None",
+            Value::Opt(Some(n)) => s == format!("Some({})", n),
         }
     }
 }
@@ -111,6 +120,15 @@ pub fn eval(node: &Node, env: &Env, grammar: &Grammar) -> Result<Value, EvalErro
         "ExprNot" => {
             let child = eval_child(node, 0, env, grammar)?;
             Ok(Value::Bool(!child.as_bool()?))
+        }
+
+        // Option operations
+        "ExprOptIsSome" => Ok(Value::Bool(eval_child(node, 0, env, grammar)?.as_opt_i32()?.is_some())),
+        "ExprOptIsNone" => Ok(Value::Bool(eval_child(node, 0, env, grammar)?.as_opt_i32()?.is_none())),
+        "ExprOptUnwrapOr" => {
+            let opt = eval_child(node, 0, env, grammar)?.as_opt_i32()?;
+            let default = eval_child(node, 1, env, grammar)?.as_int()?;
+            Ok(Value::Int(opt.unwrap_or(default)))
         }
 
         // If expressions

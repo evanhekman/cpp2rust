@@ -67,6 +67,14 @@ pub fn parse_env(test_case: &TestCase, params: &[Param]) -> crate::eval::Env {
         .map(|(param, input)| {
             let val = match param.ty.as_str() {
                 "bool" => Value::Bool(input == "true"),
+                "&i32" => Value::Int(input.parse::<i32>().expect("invalid &i32 input")),
+                "Option<&i32>" => {
+                    if input == "null" || input == "None" {
+                        Value::Opt(None)
+                    } else {
+                        Value::Opt(Some(input.parse::<i32>().expect("invalid Option<&i32> input")))
+                    }
+                }
                 _ => Value::Int(input.parse::<i32>().expect("invalid i32 input")),
             };
             (param.name.clone(), val)

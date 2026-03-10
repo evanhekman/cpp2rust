@@ -196,13 +196,44 @@ pub fn build_grammar(
 
     // Idents → typed Expr leaves
     for (i, param) in params.iter().enumerate() {
-        let nt = format!("Expr_{}", param.ty);
+        let nt = match param.ty.as_str() {
+            "&i32" => "Expr_i32".to_string(),
+            "Option<&i32>" => "Expr_opt_i32".to_string(),
+            other => format!("Expr_{}", other),
+        };
         g.entry(nt.clone()).or_default().push(Production {
             name: format!("ExprIdent_{}", i),
             nonterminal: nt,
             children_spec: vec![],
             rust_template: param.name.clone(),
             literal_value: None, // resolved from env at eval time
+        });
+    }
+
+    // Option<&i32> operations — only added when needed
+    if params.iter().any(|p| p.ty == "Option<&i32>") {
+        g.entry("Expr_bool".into()).or_default().extend([
+            Production {
+                name: "ExprOptIsSome".into(),
+                nonterminal: "Expr_bool".into(),
+                children_spec: vec!["Expr_opt_i32".into()],
+                rust_template: "{0}.is_some()".into(),
+                literal_value: None,
+            },
+            Production {
+                name: "ExprOptIsNone".into(),
+                nonterminal: "Expr_bool".into(),
+                children_spec: vec!["Expr_opt_i32".into()],
+                rust_template: "{0}.is_none()".into(),
+                literal_value: None,
+            },
+        ]);
+        g.entry("Expr_i32".into()).or_default().push(Production {
+            name: "ExprOptUnwrapOr".into(),
+            nonterminal: "Expr_i32".into(),
+            children_spec: vec!["Expr_opt_i32".into(), "Expr_i32".into()],
+            rust_template: "{0}.unwrap_or({1})".into(),
+            literal_value: None,
         });
     }
 
