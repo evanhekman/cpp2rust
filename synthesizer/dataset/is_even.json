@@ -1,12 +1,49 @@
 {
   "name": "is_even",
-  "params": [{"name": "x", "type": "i32"}],
+  "params": [
+    {
+      "name": "x",
+      "type": "i32"
+    }
+  ],
   "return_type": "bool",
   "example_rust": "pub fn is_even(x: i32) -> bool { return ((x % 2) == 0); }",
   "test_cases": [
-    {"inputs": ["0"], "expected_output": "true"},
-    {"inputs": ["2"], "expected_output": "true"},
-    {"inputs": ["1"], "expected_output": "false"},
-    {"inputs": ["3"], "expected_output": "false"}
+    {
+      "inputs": [
+        "0"
+      ],
+      "expected_output": "true"
+    },
+    {
+      "inputs": [
+        "2"
+      ],
+      "expected_output": "true"
+    },
+    {
+      "inputs": [
+        "1"
+      ],
+      "expected_output": "false"
+    },
+    {
+      "inputs": [
+        "3"
+      ],
+      "expected_output": "false"
+    },
+    {
+      "inputs": [
+        "4"
+      ],
+      "expected_output": "true"
+    },
+    {
+      "inputs": [
+        "7"
+      ],
+      "expected_output": "false"
+    }
   ]
 }

@@ -1,12 +1,49 @@
 {
   "name": "add_one",
-  "params": [{"name": "x", "type": "i32"}],
+  "params": [
+    {
+      "name": "x",
+      "type": "i32"
+    }
+  ],
   "return_type": "i32",
   "example_rust": "pub fn add_one(x: i32) -> i32 { return (x + 1); }",
   "test_cases": [
-    {"inputs": ["0"], "expected_output": "1"},
-    {"inputs": ["1"], "expected_output": "2"},
-    {"inputs": ["5"], "expected_output": "6"},
-    {"inputs": ["-1"], "expected_output": "0"}
+    {
+      "inputs": [
+        "0"
+      ],
+      "expected_output": "1"
+    },
+    {
+      "inputs": [
+        "1"
+      ],
+      "expected_output": "2"
+    },
+    {
+      "inputs": [
+        "5"
+      ],
+      "expected_output": "6"
+    },
+    {
+      "inputs": [
+        "-1"
+      ],
+      "expected_output": "0"
+    },
+    {
+      "inputs": [
+        "10"
+      ],
+      "expected_output": "11"
+    },
+    {
+      "inputs": [
+        "-5"
+      ],
+      "expected_output": "-4"
+    }
   ]
 }

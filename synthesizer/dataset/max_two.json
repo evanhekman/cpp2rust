@@ -1,12 +1,59 @@
 {
   "name": "max_two",
-  "params": [{"name": "a", "type": "i32"}, {"name": "b", "type": "i32"}],
+  "params": [
+    {
+      "name": "a",
+      "type": "i32"
+    },
+    {
+      "name": "b",
+      "type": "i32"
+    }
+  ],
   "return_type": "i32",
   "example_rust": "pub fn max_two(a: i32, b: i32) -> i32 { if (a > b) { return a; } else { return b; } }",
   "test_cases": [
-    {"inputs": ["1", "2"], "expected_output": "2"},
-    {"inputs": ["3", "3"], "expected_output": "3"},
-    {"inputs": ["5", "2"], "expected_output": "5"},
-    {"inputs": ["-1", "0"], "expected_output": "0"}
+    {
+      "inputs": [
+        "1",
+        "2"
+      ],
+      "expected_output": "2"
+    },
+    {
+      "inputs": [
+        "3",
+        "3"
+      ],
+      "expected_output": "3"
+    },
+    {
+      "inputs": [
+        "5",
+        "2"
+      ],
+      "expected_output": "5"
+    },
+    {
+      "inputs": [
+        "-1",
+        "0"
+      ],
+      "expected_output": "0"
+    },
+    {
+      "inputs": [
+        "0",
+        "-1"
+      ],
+      "expected_output": "0"
+    },
+    {
+      "inputs": [
+        "7",
+        "4"
+      ],
+      "expected_output": "7"
+    }
   ]
 }

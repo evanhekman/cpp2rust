@@ -1,12 +1,69 @@
 {
   "name": "clamp",
-  "params": [{"name": "x", "type": "i32"}, {"name": "lo", "type": "i32"}, {"name": "hi", "type": "i32"}],
+  "params": [
+    {
+      "name": "x",
+      "type": "i32"
+    },
+    {
+      "name": "lo",
+      "type": "i32"
+    },
+    {
+      "name": "hi",
+      "type": "i32"
+    }
+  ],
   "return_type": "i32",
   "example_rust": "pub fn clamp(x: i32, lo: i32, hi: i32) -> i32 { if (x < lo) { return lo; } else { if (x > hi) { return hi; } else { return x; } } }",
   "test_cases": [
-    {"inputs": ["5", "0", "10"], "expected_output": "5"},
-    {"inputs": ["-1", "0", "10"], "expected_output": "0"},
-    {"inputs": ["11", "0", "10"], "expected_output": "10"},
-    {"inputs": ["0", "0", "10"], "expected_output": "0"}
+    {
+      "inputs": [
+        "5",
+        "0",
+        "10"
+      ],
+      "expected_output": "5"
+    },
+    {
+      "inputs": [
+        "-1",
+        "0",
+        "10"
+      ],
+      "expected_output": "0"
+    },
+    {
+      "inputs": [
+        "11",
+        "0",
+        "10"
+      ],
+      "expected_output": "10"
+    },
+    {
+      "inputs": [
+        "0",
+        "0",
+        "10"
+      ],
+      "expected_output": "0"
+    },
+    {
+      "inputs": [
+        "10",
+        "0",
+        "10"
+      ],
+      "expected_output": "10"
+    },
+    {
+      "inputs": [
+        "3",
+        "5",
+        "8"
+      ],
+      "expected_output": "5"
+    }
   ]
 }

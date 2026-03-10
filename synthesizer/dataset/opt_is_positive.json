@@ -1,12 +1,49 @@
 {
   "name": "opt_is_positive",
-  "params": [{"name": "p", "type": "Option<&i32>"}],
+  "params": [
+    {
+      "name": "p",
+      "type": "Option<&i32>"
+    }
+  ],
   "return_type": "bool",
   "example_rust": "pub fn opt_is_positive(p: Option<&i32>) -> bool { return (p.is_some() && (p.unwrap_or(0) > 0)); }",
   "test_cases": [
-    {"inputs": ["null"], "expected_output": "false"},
-    {"inputs": ["5"], "expected_output": "true"},
-    {"inputs": ["-3"], "expected_output": "false"},
-    {"inputs": ["0"], "expected_output": "false"}
+    {
+      "inputs": [
+        "null"
+      ],
+      "expected_output": "false"
+    },
+    {
+      "inputs": [
+        "5"
+      ],
+      "expected_output": "true"
+    },
+    {
+      "inputs": [
+        "-3"
+      ],
+      "expected_output": "false"
+    },
+    {
+      "inputs": [
+        "0"
+      ],
+      "expected_output": "false"
+    },
+    {
+      "inputs": [
+        "1"
+      ],
+      "expected_output": "true"
+    },
+    {
+      "inputs": [
+        "-1"
+      ],
+      "expected_output": "false"
+    }
   ]
 }

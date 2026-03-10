@@ -1,12 +1,49 @@
 {
   "name": "negate",
-  "params": [{"name": "x", "type": "i32"}],
+  "params": [
+    {
+      "name": "x",
+      "type": "i32"
+    }
+  ],
   "return_type": "i32",
   "example_rust": "pub fn negate(x: i32) -> i32 { return (0 - x); }",
   "test_cases": [
-    {"inputs": ["0"], "expected_output": "0"},
-    {"inputs": ["1"], "expected_output": "-1"},
-    {"inputs": ["-3"], "expected_output": "3"},
-    {"inputs": ["5"], "expected_output": "-5"}
+    {
+      "inputs": [
+        "0"
+      ],
+      "expected_output": "0"
+    },
+    {
+      "inputs": [
+        "1"
+      ],
+      "expected_output": "-1"
+    },
+    {
+      "inputs": [
+        "-3"
+      ],
+      "expected_output": "3"
+    },
+    {
+      "inputs": [
+        "5"
+      ],
+      "expected_output": "-5"
+    },
+    {
+      "inputs": [
+        "2"
+      ],
+      "expected_output": "-2"
+    },
+    {
+      "inputs": [
+        "-7"
+      ],
+      "expected_output": "7"
+    }
   ]
 }

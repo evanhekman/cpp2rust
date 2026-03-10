@@ -1,12 +1,49 @@
 {
   "name": "opt_double_or_zero",
-  "params": [{"name": "p", "type": "Option<&i32>"}],
+  "params": [
+    {
+      "name": "p",
+      "type": "Option<&i32>"
+    }
+  ],
   "return_type": "i32",
   "example_rust": "pub fn opt_double_or_zero(p: Option<&i32>) -> i32 { if p.is_some() { return (p.unwrap_or(0) * 2); } else { return 0; } }",
   "test_cases": [
-    {"inputs": ["null"], "expected_output": "0"},
-    {"inputs": ["3"], "expected_output": "6"},
-    {"inputs": ["-4"], "expected_output": "-8"},
-    {"inputs": ["0"], "expected_output": "0"}
+    {
+      "inputs": [
+        "null"
+      ],
+      "expected_output": "0"
+    },
+    {
+      "inputs": [
+        "3"
+      ],
+      "expected_output": "6"
+    },
+    {
+      "inputs": [
+        "-4"
+      ],
+      "expected_output": "-8"
+    },
+    {
+      "inputs": [
+        "0"
+      ],
+      "expected_output": "0"
+    },
+    {
+      "inputs": [
+        "5"
+      ],
+      "expected_output": "10"
+    },
+    {
+      "inputs": [
+        "-1"
+      ],
+      "expected_output": "-2"
+    }
   ]
 }
