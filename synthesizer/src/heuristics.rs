@@ -7,6 +7,7 @@ pub fn score(node: &Node, features: Option<&CppFeatures>) -> i64 {
         // cost += h_count_match(node, f);
         // cost += h_ordering_match(node, f);
         cost += h_absent_penalty(node, f);
+        cost += h_overcount_penalty(node, f);
     }
     // cost += h_operator_reuse(node);
     // cost += h_duplicate_arg(node);
@@ -72,7 +73,9 @@ pub fn h_absent_penalty(node: &Node, features: &CppFeatures) -> i64 {
 
 fn absent_penalty_rec(node: &Node, features: &CppFeatures, cost: &mut i64) {
     if is_scored_node(node) {
-        let present = features.operator_counts.keys()
+        let present = features
+            .operator_counts
+            .keys()
             .any(|f| feature_matches(&node.kind, f));
         if !present {
             *cost += 3;
@@ -83,6 +86,30 @@ fn absent_penalty_rec(node: &Node, features: &CppFeatures, cost: &mut i64) {
             absent_penalty_rec(n, features, cost);
         }
     }
+}
+
+/// (+3) per excess use of an operator that appears in the C++ but more times
+/// in the Rust candidate than in the C++ source. Complements h_absent_penalty:
+/// that heuristic penalises operators entirely absent from C++; this one
+/// penalises operators that are present but overused.
+pub fn h_overcount_penalty(node: &Node, features: &CppFeatures) -> i64 {
+    let rust_counts = collect_operator_counts(node);
+    features
+        .operator_counts
+        .iter()
+        .map(|(feature, &cpp_count)| {
+            let rust_count: usize = rust_counts
+                .iter()
+                .filter(|(k, _)| feature_matches(k, feature))
+                .map(|(_, &v)| v)
+                .sum();
+            if rust_count > cpp_count {
+                ((rust_count - cpp_count) * 3) as i64
+            } else {
+                0
+            }
+        })
+        .sum()
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
