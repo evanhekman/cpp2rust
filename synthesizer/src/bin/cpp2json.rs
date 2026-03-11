@@ -282,11 +282,37 @@ fn generate_test_cases(
 ///   - "*" is detected as ExprMul even when it is a pointer dereference.
 ///   - "-" in return types like "->", function names, etc. may produce spurious
 ///     ExprSub entries, though our simple dataset functions don't use these.
-fn scan_operators(body: &str) -> (std::collections::HashMap<String, usize>, Vec<String>) {
+fn scan_operators(body: &str, params: &[Param]) -> (std::collections::HashMap<String, usize>, Vec<String>) {
+    // Build dynamic param-specific patterns first (higher priority via longer match).
+    // These are processed before the generic scan to correctly classify pointer ops.
+    let mut dynamic: Vec<(String, &str)> = Vec::new();
+    for p in params {
+        let pe = regex::escape(&p.name);
+        match p.rust_type.as_str() {
+            "Option<&i32>" => {
+                // null checks → Option predicates
+                dynamic.push((format!(r"\b{pe}\s*!=\s*(nullptr|NULL)\b"), "ExprOptIsSome"));
+                dynamic.push((format!(r"(nullptr|NULL)\s*!=\s*\b{pe}\b"), "ExprOptIsSome"));
+                dynamic.push((format!(r"\b{pe}\s*==\s*(nullptr|NULL)\b"), "ExprOptIsNone"));
+                dynamic.push((format!(r"(nullptr|NULL)\s*==\s*\b{pe}\b"), "ExprOptIsNone"));
+                // bare boolean checks: if (p) / if (!p)
+                dynamic.push((format!(r"if\s*\(\s*{pe}\s*\)"), "ExprOptIsSome"));
+                dynamic.push((format!(r"if\s*\(\s*!\s*{pe}\s*\)"), "ExprOptIsNone"));
+                // dereference → unwrap
+                dynamic.push((format!(r"\*\s*{pe}\b"), "ExprOptUnwrapOr"));
+            }
+            "&i32" => {
+                // dereference of non-nullable pointer is auto-deref in Rust; suppress ExprMul
+                dynamic.push((format!(r"\*\s*{pe}\b"), "__skip__"));
+            }
+            _ => {}
+        }
+    }
+
     // (regex, feature_name) — longer/multi-char patterns listed before single-char
     // so that when two patterns match the same position, the longer one has a later
     // end index and wins the sort.
-    let specs: &[(&str, &str)] = &[
+    let generic: &[(&str, &str)] = &[
         (r"==",    "ExprEq"),
         (r"!=",    "ExprNe"),
         (r">=",    "ExprGe"),
@@ -305,11 +331,18 @@ fn scan_operators(body: &str) -> (std::collections::HashMap<String, usize>, Vec<
     ];
 
     // Collect all matches as (start, end, name)
-    let mut all: Vec<(usize, usize, &str)> = Vec::new();
-    for (pat, name) in specs {
+    // Dynamic patterns use owned Strings; generic use &str.
+    let mut all: Vec<(usize, usize, String)> = Vec::new();
+    for (pat, name) in &dynamic {
         let re = Regex::new(pat).unwrap();
         for m in re.find_iter(body) {
-            all.push((m.start(), m.end(), name));
+            all.push((m.start(), m.end(), name.to_string()));
+        }
+    }
+    for (pat, name) in generic {
+        let re = Regex::new(pat).unwrap();
+        for m in re.find_iter(body) {
+            all.push((m.start(), m.end(), name.to_string()));
         }
     }
 
@@ -323,16 +356,18 @@ fn scan_operators(body: &str) -> (std::collections::HashMap<String, usize>, Vec<
     for (start, end, name) in all {
         if start >= covered {
             covered = end;
-            *counts.entry(name.to_string()).or_default() += 1;
-            sequence.push(name.to_string());
+            if name != "__skip__" {
+                *counts.entry(name.clone()).or_default() += 1;
+                sequence.push(name);
+            }
         }
     }
 
     (counts, sequence)
 }
 
-fn extract_features(body: &str) -> Value {
-    let (counts, sequence) = scan_operators(body);
+fn extract_features(body: &str, params: &[Param]) -> Value {
+    let (counts, sequence) = scan_operators(body, params);
     json!({
         "operator_counts": counts,
         "operator_sequence": sequence,
@@ -366,7 +401,7 @@ fn main() {
     let features = {
         let re = Regex::new(r"(?s)\{(.*)\}").unwrap();
         let body = re.captures(&src).and_then(|c| c.get(1)).map(|m| m.as_str()).unwrap_or(&src);
-        extract_features(body)
+        extract_features(body, &sig.params)
     };
 
     let out = json!({
