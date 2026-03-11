@@ -17,7 +17,8 @@ pub struct TestCase {
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct CppFeatures {
-    pub operators: Vec<String>,
+    pub operator_counts: std::collections::HashMap<String, usize>,
+    pub operator_sequence: Vec<String>,
 }
 
 #[derive(Deserialize, Clone, Debug)]

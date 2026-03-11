@@ -269,40 +269,74 @@ fn generate_test_cases(
 
 // ── C++ feature extraction ────────────────────────────────────────────────────
 
-/// Extract which Rust grammar operators are likely needed based on the C++ body.
-/// Uses prefix naming: "ExprIfElse" matches "ExprIfElse_i32", "ExprIfElse_bool", etc.
-fn extract_features(body: &str) -> Value {
-    let mut ops: Vec<&str> = Vec::new();
+/// Scan the C++ body left-to-right and return (operator_counts, operator_sequence).
+///
+/// Operator names map to Rust grammar node prefixes, with one special case:
+///   "IfElse" — matches both ExprIfElse_* and StmtIfElse in the Rust AST.
+///
+/// Overlap resolution: at any position, the longest match wins (multi-char
+/// operators like ">=" take priority over ">"). Matches that start inside an
+/// already-covered range are skipped.
+///
+/// Known false positives:
+///   - "*" is detected as ExprMul even when it is a pointer dereference.
+///   - "-" in return types like "->", function names, etc. may produce spurious
+///     ExprSub entries, though our simple dataset functions don't use these.
+fn scan_operators(body: &str) -> (std::collections::HashMap<String, usize>, Vec<String>) {
+    // (regex, feature_name) — longer/multi-char patterns listed before single-char
+    // so that when two patterns match the same position, the longer one has a later
+    // end index and wins the sort.
+    let specs: &[(&str, &str)] = &[
+        (r"==",    "ExprEq"),
+        (r"!=",    "ExprNe"),
+        (r">=",    "ExprGe"),
+        (r"<=",    "ExprLe"),
+        (r"&&",    "ExprAnd"),
+        (r"\|\|",  "ExprOr"),
+        (r"\bif\b","IfElse"),   // each `if` = one if/else construct
+        (r">",     "ExprGt"),
+        (r"<",     "ExprLt"),
+        (r"\+",    "ExprAdd"),
+        (r"-",     "ExprSub"),
+        (r"\*",    "ExprMul"),  // false positive: also matches dereference
+        (r"/",     "ExprDiv"),
+        (r"%",     "ExprMod"),
+        (r"!",     "ExprNot"),
+    ];
 
-    // Multi-char operators — check before single-char to avoid substring collisions
-    if body.contains("==") { ops.push("ExprEq"); }
-    if body.contains("!=") { ops.push("ExprNe"); }
-    if body.contains(">=") { ops.push("ExprGe"); }
-    if body.contains("<=") { ops.push("ExprLe"); }
-    if body.contains("&&") { ops.push("ExprAnd"); }
-    if body.contains("||") { ops.push("ExprOr"); }
-
-    // Single-char — use regex to avoid matching inside multi-char operators
-    if Regex::new(r">[^>=]").unwrap().is_match(body) { ops.push("ExprGt"); }
-    if Regex::new(r"<[^<=]").unwrap().is_match(body) { ops.push("ExprLt"); }
-    if body.contains('+') { ops.push("ExprAdd"); }
-    if Regex::new(r"-[^->]").unwrap().is_match(body) { ops.push("ExprSub"); }
-    if body.contains('*') { ops.push("ExprMul"); }  // accepts dereference as false positive
-    if Regex::new(r"/[^/]").unwrap().is_match(body) { ops.push("ExprDiv"); }
-    if body.contains('%') { ops.push("ExprMod"); }
-    if Regex::new(r"![^=]").unwrap().is_match(body) { ops.push("ExprNot"); }
-
-    // Control flow
-    let has_if = body.contains("if");
-    let has_else = body.contains("else");
-    if has_if && has_else {
-        ops.push("ExprIfElse");
-        ops.push("StmtIfElse");
-    } else if has_if {
-        ops.push("StmtIf");
+    // Collect all matches as (start, end, name)
+    let mut all: Vec<(usize, usize, &str)> = Vec::new();
+    for (pat, name) in specs {
+        let re = Regex::new(pat).unwrap();
+        for m in re.find_iter(body) {
+            all.push((m.start(), m.end(), name));
+        }
     }
 
-    json!({ "operators": ops })
+    // Sort by start position; ties broken by longest match first
+    all.sort_by(|a, b| a.0.cmp(&b.0).then(b.1.cmp(&a.1)));
+
+    // Greedily collect non-overlapping matches
+    let mut counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    let mut sequence: Vec<String> = Vec::new();
+    let mut covered = 0usize;
+    for (start, end, name) in all {
+        if start >= covered {
+            covered = end;
+            *counts.entry(name.to_string()).or_default() += 1;
+            sequence.push(name.to_string());
+        }
+    }
+
+    (counts, sequence)
+}
+
+fn extract_features(body: &str) -> Value {
+    let (counts, sequence) = scan_operators(body);
+    json!({
+        "operator_counts": counts,
+        "operator_sequence": sequence,
+    })
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
