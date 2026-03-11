@@ -5,7 +5,7 @@ pub fn score(node: &Node, features: Option<&CppFeatures>) -> i64 {
     let mut cost = 0i64;
     if let Some(f) = features {
         // cost += h_count_match(node, f);
-        // cost += h_ordering_match(node, f);
+        cost += h_ordering_match(node, f);
         cost += h_absent_penalty(node, f);
         cost += h_overcount_penalty(node, f);
     }
@@ -119,7 +119,7 @@ pub fn h_overcount_penalty(node: &Node, features: &CppFeatures) -> i64 {
 /// All other features use prefix matching (e.g. "ExprGt" matches "ExprGt").
 fn feature_matches(rust_kind: &str, feature: &str) -> bool {
     if feature == "IfElse" {
-        rust_kind.starts_with("ExprIfElse") || rust_kind == "StmtIfElse"
+        rust_kind.starts_with("ExprIfElse") || rust_kind == "StmtIfElse" || rust_kind == "StmtIf"
     } else {
         rust_kind.starts_with(feature)
     }
@@ -129,6 +129,7 @@ fn is_scored_node(node: &Node) -> bool {
     !node.children.is_empty()
         && !node.kind.starts_with("StmtReturn")
         && !node.kind.starts_with("BlockSingle")
+        && !node.kind.starts_with("BlockSeq")
         && !node.kind.starts_with("FnDef")
         && (node.kind.starts_with("Expr") || node.kind.starts_with("Stmt"))
 }

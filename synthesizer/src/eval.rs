@@ -143,6 +143,10 @@ pub fn eval(node: &Node, env: &Env, grammar: &Grammar) -> Result<Value, EvalErro
 
         // Block / Stmt
         "BlockSingle" => eval_child(node, 0, env, grammar),
+        "BlockSeq" => match eval_child(node, 0, env, grammar) {
+            Ok(_) => eval_child(node, 1, env, grammar),
+            Err(e) => Err(e),
+        },
         "StmtReturn" => {
             let val = eval_child(node, 0, env, grammar)?;
             Err(EvalError::Return(val))

@@ -22,13 +22,22 @@ pub fn build_grammar(
     let mut g: Grammar = HashMap::new();
 
     // Block
-    g.entry("Block".into()).or_default().push(Production {
-        name: "BlockSingle".into(),
-        nonterminal: "Block".into(),
-        children_spec: vec!["Stmt".into()],
-        rust_template: "{ {0} }".into(),
-        literal_value: None,
-    });
+    g.entry("Block".into()).or_default().extend([
+        Production {
+            name: "BlockSingle".into(),
+            nonterminal: "Block".into(),
+            children_spec: vec!["Stmt".into()],
+            rust_template: "{ {0} }".into(),
+            literal_value: None,
+        },
+        Production {
+            name: "BlockSeq".into(),
+            nonterminal: "Block".into(),
+            children_spec: vec!["Stmt".into(), "Stmt".into()],
+            rust_template: "{ {0} {1} }".into(),
+            literal_value: None,
+        },
+    ]);
 
     // Stmt
     let expr_nt = format!("Expr_{}", return_type);
