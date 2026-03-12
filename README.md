@@ -12,7 +12,13 @@
     - very basic snippets, less than 8 nodes in the AST
     - synthesizer does not succeed on all of them which is okay (hard problem when there is no heuristic to guide the search)
   - synthesizer/dataset1 is basic c++ files to test using similarity heuristics to generate the rust
-
+- preprocessing
+  - happens on raw cpp before synthesizer runs
+  - catches a few key things
+    - whether pointers are read-only or part of output
+    - whether parameters are readonly length descriptors for pointer sizes
+    - throw that is caught inside of function (-> early return)
+    - pointer aliasing (-> mut reference or shared reference)
 ### rules
 - `clippy` recommended linter (`cargo clippy --fix` to apply formatting), comes preinstalled with rust
 - work on branches, PRs when applicable
