@@ -21,6 +21,7 @@
     - pointer aliasing (-> mut reference or shared reference)
 - verus
   - setup scripts in scripts/
+  - check verus/ code with `./verus/verus --crate-type lib benchmark0/verus/testcase.rs
 
 ### rules
 - `clippy` recommended linter (`cargo clippy --fix` to apply formatting), comes preinstalled with rust
