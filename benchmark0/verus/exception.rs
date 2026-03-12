@@ -6,18 +6,17 @@ pub fn first_negative(v: &[i32]) -> (result: i32)
     requires
         v.len() <= i32::MAX as usize,
     ensures
-        result == -1 || (0 <= result as int < v@.len() && v@[result as int] < 0),
-        result >= 0 ==> forall|j: int| 0 <= j < result ==> v@[j] >= 0,
-        result == -1 ==> forall|j: int| 0 <= j < v@.len() ==> v@[j] >= 0,
+        result == -1 || (0 <= result as int && (result as int) < v@.len() && v@[result as int] < 0),
+        result >= 0 ==> forall|j: int| 0 <= j && j < result ==> v@[j] >= 0,
+        result == -1 ==> forall|j: int| 0 <= j && (j as nat) < v@.len() ==> v@[j] >= 0,
 {
     let mut i: usize = 0;
     while i < v.len()
         invariant
-            // i stays within bounds and within i32 range (so cast is safe)
-            i <= v.len(),
-            i <= i32::MAX as usize,
-            // every element before i is non-negative
-            forall|j: int| 0 <= j < i as int ==> v@[j] >= 0,
+            i <= v@.len(),
+            v@.len() <= i32::MAX as usize,
+            forall|j: int| 0 <= j && j < i as int ==> v@[j] >= 0,
+        decreases v@.len() - i,
     {
         if v[i] < 0 {
             return i as i32;

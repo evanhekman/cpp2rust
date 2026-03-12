@@ -19,6 +19,9 @@
     - whether parameters are readonly length descriptors for pointer sizes
     - throw that is caught inside of function (-> early return)
     - pointer aliasing (-> mut reference or shared reference)
+- verus
+  - setup scripts in scripts/
+
 ### rules
 - `clippy` recommended linter (`cargo clippy --fix` to apply formatting), comes preinstalled with rust
 - work on branches, PRs when applicable
