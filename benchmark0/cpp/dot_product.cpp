@@ -1,6 +1,10 @@
-// Raw pointer + explicit length: the C idiom for passing arrays.
-// Uses an int accumulator which silently overflows for large inputs.
-// A naive Rust translation requires unsafe pointer indexing.
+/*
+dot product of two vector pointers
+- the c++ implementation indexes into pointers for the range 0..n
+- the naive rust implementation keeps `int n` parameter even though it is strictly unnecessary
+- the good rust implementation drops `int n` and uses &[u8] slices, which encode length directly as a fat pointer (data + length)
+*/
+
 #include <cstdint>
 
 int dot(uint8_t* a, uint8_t* b, int n) {

@@ -1,7 +1,9 @@
-// Two preprocessing challenges:
-//   1. pointer+length params (int* v, int n) → &[i32] slice, n is dropped
-//   2. exception used as early-exit control flow, not error handling
-// A naive translation both keeps the n parameter and wraps the return in Result<>.
+/*
+first negative in an array with early exit
+- the c++ implementation uses a throw/catch to exit early, and requires a size param alongside the pointer
+- a naive rust implementation would wrap this as Result<> even though the exception is internal, and would keep the redundant size param
+- a good rust implementation uses an early return and drops the size param in favour of a &[i32] slice
+*/
 
 int first_negative(int* v, int n) {
     try {
