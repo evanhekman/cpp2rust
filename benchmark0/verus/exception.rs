@@ -8,7 +8,7 @@ pub fn first_negative(v: &[i32]) -> (result: i32)
     ensures
         result == -1 || (0 <= result as int && (result as int) < v@.len() && v@[result as int] < 0),
         result >= 0 ==> forall|j: int| 0 <= j && j < result ==> v@[j] >= 0,
-        result == -1 ==> forall|j: int| 0 <= j && (j as nat) < v@.len() ==> v@[j] >= 0,
+        result == -1 ==> forall|j: int| 0 <= j && j < v@.len() ==> v@[j] >= 0,
 {
     let mut i: usize = 0;
     while i < v.len()

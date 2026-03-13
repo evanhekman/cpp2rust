@@ -12,6 +12,16 @@
     - very basic snippets, less than 8 nodes in the AST
     - synthesizer does not succeed on all of them which is okay (hard problem when there is no heuristic to guide the search)
   - synthesizer/dataset1 is basic c++ files to test using similarity heuristics to generate the rust
+  - benchmark0 is the first benchmark, and tests all stages (preprocessing, synthesis, validation)
+    - cpp folder with the raw cpp files
+      - clamp_all
+      - dot_product
+      - exception
+      - max_even_indexed
+      - reverse
+    - rust folder with "good" rust implementations
+    - prepost folder with verus function stubs showing the pre and post conditions
+    - verus folder containing the actual verus proofs for each function
 - preprocessing
   - happens on raw cpp before synthesizer runs
   - catches a few key things

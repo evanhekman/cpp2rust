@@ -8,9 +8,10 @@ verus! {
 pub fn max_even_indexed(a: &[i32]) -> (result: i32)
     requires
         a@.len() >= 1,
+        a@.len() <= usize::MAX / 2,
     ensures
-        forall|i: int| (0 <= i < a@.len() && i % 2 == 0) ==> a@[i] <= result,
-        exists|i: int| (0 <= i < a@.len() && i % 2 == 0) && a@[i] == result,
+        forall|i: int| (0 <= i && i < a@.len() && i % 2 == 0) ==> a@[i] <= result,
+        exists|i: int| (0 <= i && i < a@.len() && i % 2 == 0) && a@[i] == result,
 {
     assume(false);
     0
