@@ -1,4 +1,31 @@
-### overview
+### system overview
+The system contains three components:
+- the preprocessor
+  - this does static analysis on the c++, finding things like unnecessary parameters or internal try/catch blocks
+  - this provides three key things to the synthesizer:
+    - a rust function signature (might not be an exact match for the original c++ function)
+    - an AST-like structure containing the relevant information about the c++ (used to guide heuristic search during synthesis)
+    - a set of input/output examples on the c++, translated to equivalent rust
+- the synthesizer
+  - using the specified rust grammar, generates candidates until it finds one that passes all tests
+  - heuristic search to find good candidates, evaluated by using the input/output examples
+- the validator
+  - takes a rust candidate program and a set of pre/post conditions
+  - creates a verus proof to see if the program satisfies the conditions, yielding one of three results:
+    - counterexample (not a solution, synthesize new program)
+    - indeterminate (unknown, synthesize new program)
+    - success (fully validated rust solution)
+
+                ┌---------------┐    ┌-------------┐
+raw c++ code -> | preprocessing | -> | synthesizer | -> rust candidate program(s)
+                └---------------┘    └-------------┘
+                
+rust candidate programs -> ┌-----------┐ -> validated rust (success) 
+                           | validator |
+pre/post conditions -----> └-----------┘ -> counterexample or undetermined (back to synthesizer)
+
+
+
 - synthesizer contains all synthesizer code and tests
   - dataset/ contains 10 simple examples with depth < 8
   - code is broken down inside synthesizer/
@@ -14,14 +41,17 @@
   - synthesizer/dataset1 is basic c++ files to test using similarity heuristics to generate the rust
   - benchmark0 is the first benchmark, and tests all stages (preprocessing, synthesis, validation)
     - cpp folder with the raw cpp files
-      - clamp_all
       - dot_product
+        - unnecessary pointer length param, overflow safety, index-based loop
       - exception
+        - internal throw/catch as early return, unnecessary pointer length param
       - max_even_indexed
+        - index-based loop, pointer arithmetic
       - reverse
-    - rust folder with "good" rust implementations
+        - unnecessary pointer length param, in-place mutation
+    - rust folder with reasonable rust implementations
     - prepost folder with verus function stubs showing the pre and post conditions
-    - verus folder containing the actual verus proofs for each function
+    - verus folder containing reasonable verus proofs for each function
 - preprocessing
   - happens on raw cpp before synthesizer runs
   - catches a few key things

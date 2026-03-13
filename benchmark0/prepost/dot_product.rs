@@ -10,13 +10,13 @@ spec fn partial_dot(a: Seq<u8>, b: Seq<u8>, n: int) -> int
     else { partial_dot(a, b, n - 1) + a[n - 1] as int * b[n - 1] as int }
 }
 
-// Pre:  slices have equal length, at most 1000 elements
-//       (guarantees u32 accumulator never overflows: 1000 * 255 * 255 = 65,025,000 < 2^32)
+// Pre:  slices have equal length, at most 66051 elements
+//       (66051 is the largest n such that 255*255*n <= u32::MAX, i.e. the u32 accumulator never overflows)
 // Post: result equals the true dot product
 pub fn dot(a: &[u8], b: &[u8]) -> (result: u32)
     requires
         a@.len() == b@.len(),
-        a@.len() <= 1000,
+        a@.len() <= 66051,
     ensures
         result as int == partial_dot(a@, b@, a@.len() as int),
 {

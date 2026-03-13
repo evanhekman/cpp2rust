@@ -16,7 +16,10 @@ pub open spec fn partial_dot(a: Seq<u8>, b: Seq<u8>, n: int) -> int
 pub fn dot(a: &[u8], b: &[u8]) -> (result: u32)
     requires
         a@.len() == b@.len(),
-        a@.len() <= 1000,
+        // 66051 is the largest n such that 255*255*n <= u32::MAX (4_294_967_295).
+        // without this bound the u32 accumulator can silently overflow, matching c++ behaviour.
+        // (c++ would silently fail here, verus makes it explicit)
+        a@.len() <= 66051,
     ensures
         result as int == partial_dot(a@, b@, a@.len() as int),
 {
@@ -27,7 +30,7 @@ pub fn dot(a: &[u8], b: &[u8]) -> (result: u32)
         invariant
             i <= a@.len(),
             a@.len() == b@.len(),
-            a@.len() <= 1000,
+            a@.len() <= 66051,
             sum as int == partial_dot(a@, b@, i as int),
             sum as int <= 65025 * i as int,
         decreases a@.len() - i,
@@ -39,9 +42,9 @@ pub fn dot(a: &[u8], b: &[u8]) -> (result: u32)
 
         let term = (a[i] as u32) * (b[i] as u32);
 
-        assert(sum as int + term as int <= 65_025_000) by {
+        assert(sum as int + term as int <= 4_294_967_295) by {
             assert(sum as int <= 65025 * i as int);
-            assert((i as int) < 1000);
+            assert((i as int) < 66051);
             assert(term as int <= 65025);
         };
 
