@@ -13,7 +13,7 @@ pre/post conditions -> └───────────┘ -> (3) fail to va
 ## Preprocessor
 ### Purpose
 Runs static analysis on the C++, finding things like unnecessary parameters or internal try/catch blocks. These are structural aspects of the C++ that must be changed to produce acceptable Rust code. Specific things the preprocessor needs to look for:
-  - self-contained throw/catch blocks that are turned into early retunrs
+  - self-contained throw/catch blocks that are turned into early returns
   - pointer-length params (encoded in rust fat pointers directly)
   - read-only or write-through pointers (whether rust needs `mut`)
   - pointer arithmetic (converted to index-based loop)
@@ -67,9 +67,9 @@ All 4 test cases provide an opportunity for the preprocessor to flag unnecessary
   - in-place element mutation -> mutable slice
 
 # Verus
-Setup scripts can be found in scripts/, check the verus code with `./verus/verus 
-  - setup scripts in scripts/
-  - check verus/ code with `./verus/verus --crate-type lib benchmark0/verus/testcase.rs`
+- Setup scripts can be found in scripts/.
+- setup scripts in scripts/
+- check verus/ code with `./verus/verus --crate-type lib benchmark0/verus/testcase.rs`
 
 ### Rules
 - Recommended to use `clippy` as linter for rust (`cargo clippy --fix` to apply formatting), comes preinstalled
@@ -79,4 +79,7 @@ Setup scripts can be found in scripts/, check the verus code with `./verus/verus
 
 ### TODO
 - [ ] Refactor things into an actual preprocessor (cpp2json.rs, etc.)
-- [ ]
+- [ ] Build out validator
+- [ ] Build out full pipeline
+- [ ] Expand synthesizer to handle new dataset
+- [ ] Determine preprocessing artifacts to define inputs for synthesizer
