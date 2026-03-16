@@ -74,7 +74,7 @@ All 4 test cases provide an opportunity for the preprocessor to flag unnecessary
 # Verus
 - Setup scripts can be found in scripts/.
 - setup scripts in scripts/
-- check verus/ code with `./verus/verus --crate-type lib benchmark0/verus/testcase.rs`
+- check verus/ code with `./verus/verus --crate-type lib benchmark0/validated/testcase.rs`
 
 ### Rules
 - Recommended to use `clippy` as linter for rust (`cargo clippy --fix` to apply formatting), comes preinstalled
