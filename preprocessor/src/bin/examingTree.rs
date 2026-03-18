@@ -23,6 +23,7 @@ fn main() -> Result<()> {
         "hello_main.cpp",
         "minimal_class.cpp",
         "control_flow.cpp",
+        "nullable_ptr.cpp",
     ];
 
     let args: Vec<String> = env::args().skip(1).collect();
@@ -116,6 +117,9 @@ fn main() -> Result<()> {
                 v.name,
                 v.type_spelling
             );
+            if let Some(note) = &v.nullability_note {
+                println!("    note: {}", note);
+            }
         }
 
         println!("\n-- operators ({}) --", ex.operators.len());
