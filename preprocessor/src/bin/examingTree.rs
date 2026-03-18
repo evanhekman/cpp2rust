@@ -22,6 +22,7 @@ fn main() -> Result<()> {
         "literals.cpp",
         "hello_main.cpp",
         "minimal_class.cpp",
+        "control_flow.cpp",
     ];
 
     let args: Vec<String> = env::args().skip(1).collect();
@@ -125,6 +126,15 @@ fn main() -> Result<()> {
         println!("\n-- literals ({}) --", ex.literals.len());
         for (idx, lit) in ex.literals.iter().enumerate() {
             println!("  [{}] {}", idx, lit);
+        }
+
+        println!("\n-- control_flow ({}) --", ex.control_flow.len());
+        for c in &ex.control_flow {
+            if c.header.is_empty() {
+                println!("  {:?}  ({})", c.kind, c.node_kind);
+            } else {
+                println!("  {:?}  ({})  header: {}", c.kind, c.node_kind, c.header);
+            }
         }
         println!();
     }

@@ -32,6 +32,13 @@
         ],
         "literals": [
           "1"
+        ],
+        "control_flow": [
+          {
+            "kind": "return",
+            "node_kind": "return_statement",
+            "header": ""
+          }
         ]
       }
     },
@@ -62,7 +69,8 @@
           "42",
           "3.14",
           "\"ok\""
-        ]
+        ],
+        "control_flow": []
       }
     },
     {
@@ -87,6 +95,13 @@
         "literals": [
           "\"hello\\n\"",
           "0"
+        ],
+        "control_flow": [
+          {
+            "kind": "return",
+            "node_kind": "return_statement",
+            "header": ""
+          }
         ]
       }
     },
@@ -130,7 +145,184 @@
             "kind": "binary"
           }
         ],
-        "literals": []
+        "literals": [],
+        "control_flow": [
+          {
+            "kind": "return",
+            "node_kind": "return_statement",
+            "header": ""
+          }
+        ]
+      }
+    },
+    {
+      "path": "/Users/austinshen/Documents/Umich/2026Winter/EECS498_programSynthesis/cpp2rust/preprocessor/test_inputs/control_flow.cpp",
+      "root_has_error": false,
+      "extracted": {
+        "variables": [
+          {
+            "name": "x",
+            "type_spelling": "int",
+            "role": "parameter"
+          },
+          {
+            "name": "y",
+            "type_spelling": "int",
+            "role": "local"
+          },
+          {
+            "name": "i",
+            "type_spelling": "int",
+            "role": "local"
+          },
+          {
+            "name": "j",
+            "type_spelling": "int",
+            "role": "local"
+          }
+        ],
+        "functions": [
+          {
+            "name": "control_flow",
+            "return_type": "int",
+            "parameters": [
+              [
+                "int",
+                "x"
+              ]
+            ],
+            "is_definition": true
+          }
+        ],
+        "operators": [
+          {
+            "spelling": "<",
+            "kind": "binary"
+          },
+          {
+            "spelling": "-",
+            "kind": "unary"
+          },
+          {
+            "spelling": "==",
+            "kind": "binary"
+          },
+          {
+            "spelling": "<",
+            "kind": "binary"
+          },
+          {
+            "spelling": "++",
+            "kind": "update"
+          },
+          {
+            "spelling": "+",
+            "kind": "binary"
+          },
+          {
+            "spelling": "<",
+            "kind": "binary"
+          },
+          {
+            "spelling": "++",
+            "kind": "update"
+          },
+          {
+            "spelling": "==",
+            "kind": "binary"
+          }
+        ],
+        "literals": [
+          "0",
+          "0",
+          "0",
+          "10",
+          "0",
+          "3",
+          "0",
+          "2",
+          "1",
+          "1",
+          "111",
+          "222"
+        ],
+        "control_flow": [
+          {
+            "kind": "if",
+            "node_kind": "if_statement",
+            "header": "(x < 0)"
+          },
+          {
+            "kind": "else",
+            "node_kind": "else_clause",
+            "header": ""
+          },
+          {
+            "kind": "if",
+            "node_kind": "if_statement",
+            "header": "(x == 0)"
+          },
+          {
+            "kind": "else",
+            "node_kind": "else_clause",
+            "header": ""
+          },
+          {
+            "kind": "for",
+            "node_kind": "for_statement",
+            "header": "i < 3"
+          },
+          {
+            "kind": "while",
+            "node_kind": "while_statement",
+            "header": "(j < 2)"
+          },
+          {
+            "kind": "if",
+            "node_kind": "if_statement",
+            "header": "(j == 1)"
+          },
+          {
+            "kind": "continue",
+            "node_kind": "continue_statement",
+            "header": ""
+          },
+          {
+            "kind": "break",
+            "node_kind": "break_statement",
+            "header": ""
+          },
+          {
+            "kind": "switch",
+            "node_kind": "switch_statement",
+            "header": "(x)"
+          },
+          {
+            "kind": "case",
+            "node_kind": "case_statement",
+            "header": "1"
+          },
+          {
+            "kind": "break",
+            "node_kind": "break_statement",
+            "header": ""
+          },
+          {
+            "kind": "case",
+            "node_kind": "case_statement",
+            "header": ""
+          },
+          {
+            "kind": "break",
+            "node_kind": "break_statement",
+            "header": ""
+          },
+          {
+            "kind": "return",
+            "node_kind": "return_statement",
+            "header": ""
+          }
+        ]
       }
     }
   ]

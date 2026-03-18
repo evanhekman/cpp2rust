@@ -14,6 +14,39 @@ use tree_sitter::{Node, Tree};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
+pub enum ControlFlowKind {
+    If,
+    Else,
+    Switch,
+    Case,
+    Default,
+    For,
+    While,
+    DoWhile,
+    Break,
+    Continue,
+    Return,
+    Goto,
+    Throw,
+    Try,
+    Catch,
+    CoReturn,
+    CoYield,
+    CoAwait,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ControlFlowInfo {
+    pub kind: ControlFlowKind,
+    /// Raw Tree-sitter node kind (e.g. `"if_statement"`).
+    pub node_kind: String,
+    /// Best-effort "header" / key expression for the construct (e.g. if-condition, loop-condition).
+    /// Empty when not applicable.
+    pub header: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum VariableRole {
     /// File-scope or namespace-scope declaration.
     Global,
@@ -62,6 +95,7 @@ pub struct Extracted {
     pub functions: Vec<FunctionInfo>,
     pub operators: Vec<OperatorInfo>,
     pub literals: Vec<String>,
+    pub control_flow: Vec<ControlFlowInfo>,
 }
 
 /// Walk the tree once and fill all lists (order roughly follows source pre-order).
@@ -117,6 +151,136 @@ pub fn write_batch_json(path: impl AsRef<Path>, batch: &ExtractedBatch) -> anyho
 
 fn walk(node: Node<'_>, parent: Option<Node<'_>>, source: &[u8], out: &mut Extracted) {
     match node.kind() {
+        // ── Control flow / logic blocks ────────────────────────────────────
+        "if_statement" => {
+            out.control_flow.push(ControlFlowInfo {
+                kind: ControlFlowKind::If,
+                node_kind: node.kind().to_string(),
+                header: header_from_field(node, source, "condition"),
+            });
+            // Tree-sitter-cpp represents `else` as an `else_clause` node.
+        }
+        "else_clause" => {
+            out.control_flow.push(ControlFlowInfo {
+                kind: ControlFlowKind::Else,
+                node_kind: node.kind().to_string(),
+                header: String::new(),
+            });
+        }
+        "switch_statement" => {
+            out.control_flow.push(ControlFlowInfo {
+                kind: ControlFlowKind::Switch,
+                node_kind: node.kind().to_string(),
+                header: header_from_field(node, source, "condition"),
+            });
+        }
+        "case_statement" => {
+            out.control_flow.push(ControlFlowInfo {
+                kind: ControlFlowKind::Case,
+                node_kind: node.kind().to_string(),
+                header: header_from_field(node, source, "value"),
+            });
+        }
+        "default_statement" => {
+            out.control_flow.push(ControlFlowInfo {
+                kind: ControlFlowKind::Default,
+                node_kind: node.kind().to_string(),
+                header: String::new(),
+            });
+        }
+        "for_statement" => {
+            out.control_flow.push(ControlFlowInfo {
+                kind: ControlFlowKind::For,
+                node_kind: node.kind().to_string(),
+                header: header_from_field(node, source, "condition"),
+            });
+        }
+        "while_statement" => {
+            out.control_flow.push(ControlFlowInfo {
+                kind: ControlFlowKind::While,
+                node_kind: node.kind().to_string(),
+                header: header_from_field(node, source, "condition"),
+            });
+        }
+        "do_statement" => {
+            out.control_flow.push(ControlFlowInfo {
+                kind: ControlFlowKind::DoWhile,
+                node_kind: node.kind().to_string(),
+                header: header_from_field(node, source, "condition"),
+            });
+        }
+        "break_statement" => {
+            out.control_flow.push(ControlFlowInfo {
+                kind: ControlFlowKind::Break,
+                node_kind: node.kind().to_string(),
+                header: String::new(),
+            });
+        }
+        "continue_statement" => {
+            out.control_flow.push(ControlFlowInfo {
+                kind: ControlFlowKind::Continue,
+                node_kind: node.kind().to_string(),
+                header: String::new(),
+            });
+        }
+        "return_statement" => {
+            out.control_flow.push(ControlFlowInfo {
+                kind: ControlFlowKind::Return,
+                node_kind: node.kind().to_string(),
+                header: header_from_field(node, source, "argument"),
+            });
+        }
+        "goto_statement" => {
+            out.control_flow.push(ControlFlowInfo {
+                kind: ControlFlowKind::Goto,
+                node_kind: node.kind().to_string(),
+                header: header_from_field(node, source, "label"),
+            });
+        }
+        "throw_statement" => {
+            out.control_flow.push(ControlFlowInfo {
+                kind: ControlFlowKind::Throw,
+                node_kind: node.kind().to_string(),
+                header: header_from_field(node, source, "argument"),
+            });
+        }
+        "try_statement" => {
+            out.control_flow.push(ControlFlowInfo {
+                kind: ControlFlowKind::Try,
+                node_kind: node.kind().to_string(),
+                header: String::new(),
+            });
+        }
+        "catch_clause" => {
+            // Some grammars have a `parameter`/`declarator` inside; keep a small header for inspection.
+            out.control_flow.push(ControlFlowInfo {
+                kind: ControlFlowKind::Catch,
+                node_kind: node.kind().to_string(),
+                header: first_named_child_text(node, source),
+            });
+        }
+        "co_return_statement" => {
+            out.control_flow.push(ControlFlowInfo {
+                kind: ControlFlowKind::CoReturn,
+                node_kind: node.kind().to_string(),
+                header: header_from_field(node, source, "argument"),
+            });
+        }
+        "co_yield_statement" => {
+            out.control_flow.push(ControlFlowInfo {
+                kind: ControlFlowKind::CoYield,
+                node_kind: node.kind().to_string(),
+                header: header_from_field(node, source, "argument"),
+            });
+        }
+        "co_await_expression" => {
+            out.control_flow.push(ControlFlowInfo {
+                kind: ControlFlowKind::CoAwait,
+                node_kind: node.kind().to_string(),
+                header: header_from_field(node, source, "argument"),
+            });
+        }
+
         "function_definition" => {
             if let Some(fi) = extract_function_definition(node, source) {
                 out.functions.push(fi);
@@ -342,4 +506,16 @@ fn declarator_to_var_name(node: Node<'_>, source: &[u8]) -> Option<String> {
 
 fn node_text(n: Node<'_>, source: &[u8]) -> String {
     n.utf8_text(source).unwrap_or("").trim().to_string()
+}
+
+fn header_from_field(node: Node<'_>, source: &[u8], field: &str) -> String {
+    node.child_by_field_name(field)
+        .map(|n| node_text(n, source))
+        .unwrap_or_default()
+}
+
+fn first_named_child_text(node: Node<'_>, source: &[u8]) -> String {
+    node.named_child(0)
+        .map(|n| node_text(n, source))
+        .unwrap_or_default()
 }
