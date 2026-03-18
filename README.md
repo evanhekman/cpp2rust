@@ -1,13 +1,17 @@
 # system overview
 The system contains three components: a preprocessor, synthesizer, and validator. The preprocessor runs static analysis on the C++ source code to find key structural components, which are passed to the synthesizer. The synthesizer produces candidate rust program(s) using heuristic search, which are passed to the validator. The validator uses the pre/post conditions to try and prove the rust is correct, returning to the synthesizer if unable to do so. Given raw C++ and a set of pre/post conditions, the system should either return fully validated rust code or an error.
 ```
-           ┌───────────────┐    ┌─────────────┐
-raw C++ -> │ preprocessing │ -> │ synthesizer │ -> rust candidate(s)
-           └───────────────┘    └─────────────┘
-                
-rust candidate ------> ┌───────────┐ -> (1) validated rust (success) 
-                       │ validator │ -> (2) counterexample (try again)
-pre/post conditions -> └───────────┘ -> (3) fail to validate (try again)
+           ┌──────────────┐    
+raw C++ -> │ preprocessor │ -> intermediate AST + info
+           └──────────────┘    
+
+                           ┌─────────────┐
+intermediate AST + info -> │ synthesizer │ -> rust -> rust candidate
+                           └─────────────┘
+
+                  ┌───────────┐ -> (1) validated rust (success) 
+rust candidate -> │ validator │
+                  └───────────┘ -> (2) fail to validate (re-synthesize)
 ```
 
 ## Preprocessor
