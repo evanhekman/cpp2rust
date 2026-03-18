@@ -1,6 +1,8 @@
 .claude
 .ruff_cache
+.env
 target
 
 verus
 !benchmark0/verus
+.env
