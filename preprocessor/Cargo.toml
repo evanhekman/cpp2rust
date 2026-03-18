@@ -1,0 +1,20 @@
+[package]
+name = "cpp_preprocessor"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "cpp2tree"
+path = "src/bin/cpp2tree.rs"
+
+[[bin]]
+name = "examing_tree"
+path = "src/bin/examingTree.rs"
+
+[dependencies]
+tree-sitter = "0.26"
+tree-sitter-cpp = "0.23"
+anyhow = "1"
