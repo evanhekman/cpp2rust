@@ -3,6 +3,7 @@
 //! This is **syntactic** only (no type checking); types are best-effort spellings from the parse tree.
 
 use anyhow::Context;
+use regex::Regex;
 use serde::Serialize;
 use std::fs;
 use std::path::Path;
@@ -63,6 +64,14 @@ pub struct VariableInfo {
     pub name: String,
     pub type_spelling: String,
     pub role: VariableRole,
+    /// If this pointer-like variable is used in a null/`nullptr` guard in the source,
+    /// we add a note so downstream Rust generation can map it to `Option<...>`.
+    pub nullability_note: Option<String>,
+
+    /// Internal hint used to decide whether to run nullability inference.
+    /// Skipped in JSON output.
+    #[serde(skip)]
+    pub pointer_like: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -98,11 +107,32 @@ pub struct Extracted {
     pub control_flow: Vec<ControlFlowInfo>,
 }
 
+// Convenience helpers that mirror the old `literal_builder` API, so callers
+// that only care about literals don't need to know about the full struct.
+
+/// Collect literal spellings in pre-order (as they appear in source).
+pub fn build_literal_values(source: &str, tree: &Tree) -> Vec<String> {
+    extract_all(source, tree).literals
+}
+
+/// Print literal values in a simple indexed format.
+pub fn print_literal_values(literals: &[String]) {
+    if literals.is_empty() {
+        println!("  (no literal nodes in this tree)");
+        return;
+    }
+    println!("  count: {}", literals.len());
+    for (i, v) in literals.iter().enumerate() {
+        println!("  [{}] {}", i, v);
+    }
+}
+
 /// Walk the tree once and fill all lists (order roughly follows source pre-order).
 pub fn extract_all(source: &str, tree: &Tree) -> Extracted {
     let bytes = source.as_bytes();
     let mut out = Extracted::default();
     walk(tree.root_node(), None, bytes, &mut out);
+    infer_nullability_notes(source, &mut out.variables);
     out
 }
 
@@ -303,10 +333,13 @@ fn walk(node: Node<'_>, parent: Option<Node<'_>>, source: &[u8], out: &mut Extra
                 if let Some(d) = ch.child_by_field_name("declarator") {
                     if let Some(name) = declarator_to_var_name(d, source) {
                         let role = variable_role_for_declaration(parent);
+                        let pointer_like = declarator_is_pointer_like(d);
                         out.variables.push(VariableInfo {
                             name,
                             type_spelling: ty.clone(),
                             role,
+                            nullability_note: None,
+                            pointer_like,
                         });
                     }
                 }
@@ -336,10 +369,13 @@ fn walk(node: Node<'_>, parent: Option<Node<'_>>, source: &[u8], out: &mut Extra
                 .unwrap_or_default();
             if let Some(d) = node.child_by_field_name("declarator") {
                 if let Some(name) = declarator_to_var_name(d, source) {
+                    let pointer_like = declarator_is_pointer_like(d);
                     out.variables.push(VariableInfo {
                         name,
                         type_spelling: ty,
                         role: VariableRole::Parameter,
+                        nullability_note: None,
+                        pointer_like,
                     });
                 }
             }
@@ -351,10 +387,13 @@ fn walk(node: Node<'_>, parent: Option<Node<'_>>, source: &[u8], out: &mut Extra
                 .unwrap_or_default();
             if let Some(d) = node.child_by_field_name("declarator") {
                 if let Some(name) = declarator_to_var_name(d, source) {
+                    let pointer_like = declarator_is_pointer_like(d);
                     out.variables.push(VariableInfo {
                         name,
                         type_spelling: ty,
                         role: VariableRole::Field,
+                        nullability_note: None,
+                        pointer_like,
                     });
                 }
             }
@@ -506,6 +545,62 @@ fn declarator_to_var_name(node: Node<'_>, source: &[u8]) -> Option<String> {
 
 fn node_text(n: Node<'_>, source: &[u8]) -> String {
     n.utf8_text(source).unwrap_or("").trim().to_string()
+}
+
+fn declarator_is_pointer_like(node: Node<'_>) -> bool {
+    if node.kind() == "pointer_declarator" {
+        return true;
+    }
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        if declarator_is_pointer_like(child) {
+            return true;
+        }
+    }
+    false
+}
+
+fn infer_nullability_notes(source: &str, vars: &mut [VariableInfo]) {
+    for v in vars.iter_mut() {
+        if !v.pointer_like {
+            continue;
+        }
+        let var = regex::escape(&v.name);
+        let ptr_pat = format!(r"\b{var}\b");
+        let null_pat = r"(nullptr|NULL)";
+
+        // Match common C/C++ null guard idioms.
+        let patterns = [
+            // p == nullptr / p != nullptr
+            format!(r"{}\s*==\s*{}", ptr_pat, null_pat),
+            format!(r"{}\s*!=\s*{}", ptr_pat, null_pat),
+            // nullptr == p / NULL != p
+            format!(r"{}\s*==\s*{}", null_pat, ptr_pat),
+            format!(r"{}\s*!=\s*{}", null_pat, ptr_pat),
+            // if (p) / if (!p) or while (p) / while (!p)
+            format!(r"(?:if|while)\s*\(\s*!\s*{}\s*\)", ptr_pat),
+            format!(r"(?:if|while)\s*\(\s*{}\s*\)", ptr_pat),
+        ];
+
+        let mut is_nullable = false;
+        for pat in patterns {
+            let re = match Regex::new(&pat) {
+                Ok(r) => r,
+                Err(_) => continue,
+            };
+            if re.is_match(source) {
+                is_nullable = true;
+                break;
+            }
+        }
+
+        if is_nullable {
+            v.nullability_note = Some(
+                "Variable is guarded/checked against nullptr/NULL in the source; consider mapping to Option<...> in Rust."
+                    .to_string(),
+            );
+        }
+    }
 }
 
 fn header_from_field(node: Node<'_>, source: &[u8], field: &str) -> String {
