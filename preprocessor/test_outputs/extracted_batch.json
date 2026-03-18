@@ -1,0 +1,137 @@
+{
+  "files": [
+    {
+      "path": "/Users/austinshen/Documents/Umich/2026Winter/EECS498_programSynthesis/cpp2rust/preprocessor/test_inputs/add_one.cpp",
+      "root_has_error": false,
+      "extracted": {
+        "variables": [
+          {
+            "name": "x",
+            "type_spelling": "int",
+            "role": "parameter"
+          }
+        ],
+        "functions": [
+          {
+            "name": "add_one",
+            "return_type": "int",
+            "parameters": [
+              [
+                "int",
+                "x"
+              ]
+            ],
+            "is_definition": true
+          }
+        ],
+        "operators": [
+          {
+            "spelling": "+",
+            "kind": "binary"
+          }
+        ],
+        "literals": [
+          "1"
+        ]
+      }
+    },
+    {
+      "path": "/Users/austinshen/Documents/Umich/2026Winter/EECS498_programSynthesis/cpp2rust/preprocessor/test_inputs/literals.cpp",
+      "root_has_error": false,
+      "extracted": {
+        "variables": [
+          {
+            "name": "x",
+            "type_spelling": "int",
+            "role": "global"
+          },
+          {
+            "name": "pi",
+            "type_spelling": "double",
+            "role": "global"
+          },
+          {
+            "name": "s",
+            "type_spelling": "char",
+            "role": "global"
+          }
+        ],
+        "functions": [],
+        "operators": [],
+        "literals": [
+          "42",
+          "3.14",
+          "\"ok\""
+        ]
+      }
+    },
+    {
+      "path": "/Users/austinshen/Documents/Umich/2026Winter/EECS498_programSynthesis/cpp2rust/preprocessor/test_inputs/hello_main.cpp",
+      "root_has_error": false,
+      "extracted": {
+        "variables": [],
+        "functions": [
+          {
+            "name": "main",
+            "return_type": "int",
+            "parameters": [],
+            "is_definition": true
+          }
+        ],
+        "operators": [
+          {
+            "spelling": "<<",
+            "kind": "binary"
+          }
+        ],
+        "literals": [
+          "\"hello\\n\"",
+          "0"
+        ]
+      }
+    },
+    {
+      "path": "/Users/austinshen/Documents/Umich/2026Winter/EECS498_programSynthesis/cpp2rust/preprocessor/test_inputs/minimal_class.cpp",
+      "root_has_error": false,
+      "extracted": {
+        "variables": [
+          {
+            "name": "x",
+            "type_spelling": "int",
+            "role": "field"
+          },
+          {
+            "name": "y",
+            "type_spelling": "int",
+            "role": "field"
+          },
+          {
+            "name": "p",
+            "type_spelling": "Point",
+            "role": "parameter"
+          }
+        ],
+        "functions": [
+          {
+            "name": "sum",
+            "return_type": "int",
+            "parameters": [
+              [
+                "Point",
+                "p"
+              ]
+            ],
+            "is_definition": true
+          }
+        ],
+        "operators": [
+          {
+            "spelling": "+",
+            "kind": "binary"
+          }
+        ],
+        "literals": []
+      }
+    }
+  ]
+}

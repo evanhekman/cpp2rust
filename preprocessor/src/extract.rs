@@ -2,13 +2,18 @@
 //!
 //! This is **syntactic** only (no type checking); types are best-effort spellings from the parse tree.
 
+use anyhow::Context;
+use serde::Serialize;
+use std::fs;
+use std::path::Path;
 use tree_sitter::{Node, Tree};
 
 // ---------------------------------------------------------------------------
 // Public types
 // ---------------------------------------------------------------------------
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum VariableRole {
     /// File-scope or namespace-scope declaration.
     Global,
@@ -20,36 +25,38 @@ pub enum VariableRole {
     Field,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct VariableInfo {
     pub name: String,
     pub type_spelling: String,
     pub role: VariableRole,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct FunctionInfo {
     pub name: String,
     pub return_type: String,
+    /// Each entry is `[type_spelling, parameter_name]` (name may be empty).
     pub parameters: Vec<(String, String)>,
     /// `true` for a body (`function_definition`), `false` for a declaration-only prototype.
     pub is_definition: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
 pub enum OperatorKind {
     Binary,
     Unary,
     Update,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct OperatorInfo {
     pub spelling: String,
     pub kind: OperatorKind,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct Extracted {
     pub variables: Vec<VariableInfo>,
     pub functions: Vec<FunctionInfo>,
@@ -63,6 +70,45 @@ pub fn extract_all(source: &str, tree: &Tree) -> Extracted {
     let mut out = Extracted::default();
     walk(tree.root_node(), None, bytes, &mut out);
     out
+}
+
+/// Pretty-printed JSON for one extraction.
+pub fn extracted_to_json_pretty(ex: &Extracted) -> anyhow::Result<String> {
+    serde_json::to_string_pretty(ex).context("serialize Extracted")
+}
+
+/// Write one `Extracted` to a JSON file (pretty).
+pub fn write_extracted_json(path: impl AsRef<Path>, ex: &Extracted) -> anyhow::Result<()> {
+    let s = extracted_to_json_pretty(ex)?;
+    if let Some(parent) = path.as_ref().parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(path.as_ref(), s).with_context(|| format!("write {}", path.as_ref().display()))
+}
+
+/// Batch export: multiple files in one JSON document.
+#[derive(Debug, Serialize)]
+pub struct ExtractedBatch {
+    pub files: Vec<ExtractedFileRecord>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ExtractedFileRecord {
+    pub path: String,
+    pub root_has_error: bool,
+    pub extracted: Extracted,
+}
+
+pub fn batch_to_json_pretty(batch: &ExtractedBatch) -> anyhow::Result<String> {
+    serde_json::to_string_pretty(batch).context("serialize batch")
+}
+
+pub fn write_batch_json(path: impl AsRef<Path>, batch: &ExtractedBatch) -> anyhow::Result<()> {
+    let s = batch_to_json_pretty(batch)?;
+    if let Some(parent) = path.as_ref().parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(path.as_ref(), s).with_context(|| format!("write {}", path.as_ref().display()))
 }
 
 // ---------------------------------------------------------------------------
