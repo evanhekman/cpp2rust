@@ -24,6 +24,7 @@ fn main() -> Result<()> {
         "minimal_class.cpp",
         "control_flow.cpp",
         "nullable_ptr.cpp",
+        "assigned_null.cpp",
     ];
 
     let args: Vec<String> = env::args().skip(1).collect();
