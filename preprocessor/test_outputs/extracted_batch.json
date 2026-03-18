@@ -8,7 +8,8 @@
           {
             "name": "x",
             "type_spelling": "int",
-            "role": "parameter"
+            "role": "parameter",
+            "nullability_note": null
           }
         ],
         "functions": [
@@ -50,17 +51,20 @@
           {
             "name": "x",
             "type_spelling": "int",
-            "role": "global"
+            "role": "global",
+            "nullability_note": null
           },
           {
             "name": "pi",
             "type_spelling": "double",
-            "role": "global"
+            "role": "global",
+            "nullability_note": null
           },
           {
             "name": "s",
             "type_spelling": "char",
-            "role": "global"
+            "role": "global",
+            "nullability_note": null
           }
         ],
         "functions": [],
@@ -113,17 +117,20 @@
           {
             "name": "x",
             "type_spelling": "int",
-            "role": "field"
+            "role": "field",
+            "nullability_note": null
           },
           {
             "name": "y",
             "type_spelling": "int",
-            "role": "field"
+            "role": "field",
+            "nullability_note": null
           },
           {
             "name": "p",
             "type_spelling": "Point",
-            "role": "parameter"
+            "role": "parameter",
+            "nullability_note": null
           }
         ],
         "functions": [
@@ -163,22 +170,26 @@
           {
             "name": "x",
             "type_spelling": "int",
-            "role": "parameter"
+            "role": "parameter",
+            "nullability_note": null
           },
           {
             "name": "y",
             "type_spelling": "int",
-            "role": "local"
+            "role": "local",
+            "nullability_note": null
           },
           {
             "name": "i",
             "type_spelling": "int",
-            "role": "local"
+            "role": "local",
+            "nullability_note": null
           },
           {
             "name": "j",
             "type_spelling": "int",
-            "role": "local"
+            "role": "local",
+            "nullability_note": null
           }
         ],
         "functions": [
@@ -317,6 +328,112 @@
             "node_kind": "break_statement",
             "header": ""
           },
+          {
+            "kind": "return",
+            "node_kind": "return_statement",
+            "header": ""
+          }
+        ]
+      }
+    },
+    {
+      "path": "/Users/austinshen/Documents/Umich/2026Winter/EECS498_programSynthesis/cpp2rust/preprocessor/test_inputs/nullable_ptr.cpp",
+      "root_has_error": false,
+      "extracted": {
+        "variables": [
+          {
+            "name": "p",
+            "type_spelling": "int",
+            "role": "parameter",
+            "nullability_note": "Variable is assigned/guarded/checked against nullptr/NULL in the source; consider mapping to Option<...> in Rust."
+          }
+        ],
+        "functions": [
+          {
+            "name": "nullable_ptr",
+            "return_type": "int",
+            "parameters": [
+              [
+                "int",
+                "p"
+              ]
+            ],
+            "is_definition": true
+          }
+        ],
+        "operators": [
+          {
+            "spelling": "==",
+            "kind": "binary"
+          },
+          {
+            "spelling": "!",
+            "kind": "unary"
+          }
+        ],
+        "literals": [
+          "-1",
+          "-2"
+        ],
+        "control_flow": [
+          {
+            "kind": "if",
+            "node_kind": "if_statement",
+            "header": "(p == nullptr)"
+          },
+          {
+            "kind": "return",
+            "node_kind": "return_statement",
+            "header": ""
+          },
+          {
+            "kind": "if",
+            "node_kind": "if_statement",
+            "header": "(!p)"
+          },
+          {
+            "kind": "return",
+            "node_kind": "return_statement",
+            "header": ""
+          },
+          {
+            "kind": "return",
+            "node_kind": "return_statement",
+            "header": ""
+          }
+        ]
+      }
+    },
+    {
+      "path": "/Users/austinshen/Documents/Umich/2026Winter/EECS498_programSynthesis/cpp2rust/preprocessor/test_inputs/assigned_null.cpp",
+      "root_has_error": false,
+      "extracted": {
+        "variables": [
+          {
+            "name": "p",
+            "type_spelling": "int",
+            "role": "parameter",
+            "nullability_note": "Variable is assigned/guarded/checked against nullptr/NULL in the source; consider mapping to Option<...> in Rust."
+          }
+        ],
+        "functions": [
+          {
+            "name": "assigned_null",
+            "return_type": "int",
+            "parameters": [
+              [
+                "int",
+                "p"
+              ]
+            ],
+            "is_definition": true
+          }
+        ],
+        "operators": [],
+        "literals": [
+          "0"
+        ],
+        "control_flow": [
           {
             "kind": "return",
             "node_kind": "return_statement",

@@ -334,9 +334,10 @@ fn walk(node: Node<'_>, parent: Option<Node<'_>>, source: &[u8], out: &mut Extra
                     if let Some(name) = declarator_to_var_name(d, source) {
                         let role = variable_role_for_declaration(parent);
                         let pointer_like = declarator_is_pointer_like(d);
+                        let type_spelling = apply_pointer_modifiers(&ty, d, source);
                         out.variables.push(VariableInfo {
                             name,
-                            type_spelling: ty.clone(),
+                            type_spelling,
                             role,
                             nullability_note: None,
                             pointer_like,
@@ -370,9 +371,10 @@ fn walk(node: Node<'_>, parent: Option<Node<'_>>, source: &[u8], out: &mut Extra
             if let Some(d) = node.child_by_field_name("declarator") {
                 if let Some(name) = declarator_to_var_name(d, source) {
                     let pointer_like = declarator_is_pointer_like(d);
+                    let type_spelling = apply_pointer_modifiers(&ty, d, source);
                     out.variables.push(VariableInfo {
                         name,
-                        type_spelling: ty,
+                        type_spelling,
                         role: VariableRole::Parameter,
                         nullability_note: None,
                         pointer_like,
@@ -388,9 +390,10 @@ fn walk(node: Node<'_>, parent: Option<Node<'_>>, source: &[u8], out: &mut Extra
             if let Some(d) = node.child_by_field_name("declarator") {
                 if let Some(name) = declarator_to_var_name(d, source) {
                     let pointer_like = declarator_is_pointer_like(d);
+                    let type_spelling = apply_pointer_modifiers(&ty, d, source);
                     out.variables.push(VariableInfo {
                         name,
-                        type_spelling: ty,
+                        type_spelling,
                         role: VariableRole::Field,
                         nullability_note: None,
                         pointer_like,
@@ -547,6 +550,23 @@ fn node_text(n: Node<'_>, source: &[u8]) -> String {
     n.utf8_text(source).unwrap_or("").trim().to_string()
 }
 
+/// Extend the base type (e.g. `int`) with pointer stars extracted from the declarator subtree
+/// (e.g. `int* p` -> `int*`, `int** p` -> `int**`).
+fn apply_pointer_modifiers(base_ty: &str, declarator: Node<'_>, source: &[u8]) -> String {
+    let base = base_ty.trim();
+    let base_star_count = base.matches('*').count();
+    let decl_text = node_text(declarator, source);
+    let decl_star_count = decl_text.matches('*').count();
+
+    let total = base_star_count + decl_star_count;
+    let base_clean = base.replace('*', "").trim().to_string();
+    if total == 0 {
+        base_clean
+    } else {
+        format!("{}{}", base_clean, "*".repeat(total))
+    }
+}
+
 fn declarator_is_pointer_like(node: Node<'_>) -> bool {
     if node.kind() == "pointer_declarator" {
         return true;
@@ -577,6 +597,10 @@ fn infer_nullability_notes(source: &str, vars: &mut [VariableInfo]) {
             // nullptr == p / NULL != p
             format!(r"{}\s*==\s*{}", null_pat, ptr_pat),
             format!(r"{}\s*!=\s*{}", null_pat, ptr_pat),
+            // p = nullptr / p = NULL
+            format!(r"\b{}\b\s*=\s*{}", ptr_pat, null_pat),
+            // p = (nullptr) style
+            format!(r"\b{}\b\s*=\s*\(?\s*{}\s*\)?", ptr_pat, null_pat),
             // if (p) / if (!p) or while (p) / while (!p)
             format!(r"(?:if|while)\s*\(\s*!\s*{}\s*\)", ptr_pat),
             format!(r"(?:if|while)\s*\(\s*{}\s*\)", ptr_pat),
@@ -596,7 +620,7 @@ fn infer_nullability_notes(source: &str, vars: &mut [VariableInfo]) {
 
         if is_nullable {
             v.nullability_note = Some(
-                "Variable is guarded/checked against nullptr/NULL in the source; consider mapping to Option<...> in Rust."
+                "Variable is assigned/guarded/checked against nullptr/NULL in the source; consider mapping to Option<...> in Rust."
                     .to_string(),
             );
         }
