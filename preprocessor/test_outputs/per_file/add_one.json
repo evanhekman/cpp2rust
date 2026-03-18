@@ -1,0 +1,31 @@
+{
+  "variables": [
+    {
+      "name": "x",
+      "type_spelling": "int",
+      "role": "parameter"
+    }
+  ],
+  "functions": [
+    {
+      "name": "add_one",
+      "return_type": "int",
+      "parameters": [
+        [
+          "int",
+          "x"
+        ]
+      ],
+      "is_definition": true
+    }
+  ],
+  "operators": [
+    {
+      "spelling": "+",
+      "kind": "binary"
+    }
+  ],
+  "literals": [
+    "1"
+  ]
+}

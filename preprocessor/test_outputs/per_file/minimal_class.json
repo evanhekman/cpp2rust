@@ -1,0 +1,39 @@
+{
+  "variables": [
+    {
+      "name": "x",
+      "type_spelling": "int",
+      "role": "field"
+    },
+    {
+      "name": "y",
+      "type_spelling": "int",
+      "role": "field"
+    },
+    {
+      "name": "p",
+      "type_spelling": "Point",
+      "role": "parameter"
+    }
+  ],
+  "functions": [
+    {
+      "name": "sum",
+      "return_type": "int",
+      "parameters": [
+        [
+          "Point",
+          "p"
+        ]
+      ],
+      "is_definition": true
+    }
+  ],
+  "operators": [
+    {
+      "spelling": "+",
+      "kind": "binary"
+    }
+  ],
+  "literals": []
+}
