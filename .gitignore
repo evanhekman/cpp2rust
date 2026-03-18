@@ -5,6 +5,6 @@
 target
 verus
 verus-proof-synthesis
+intermediate*
 
 !benchmark0/verus
-intermediate*

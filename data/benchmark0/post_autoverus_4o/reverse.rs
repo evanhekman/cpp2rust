@@ -1,6 +1,9 @@
+
 use vstd::prelude::*;
 
 verus! {
+
+#[verifier::loop_isolation(false)]
 
 // Pre:  a is non-empty
 // Post: a is the reverse of its original contents
@@ -15,7 +18,12 @@ pub fn reverse(a: &mut [i32])
     let mut lo = 0usize;
     let mut hi = a.len() - 1;
     let mut tmp;
-    while lo < hi {
+    while lo < hi
+        invariant
+            old(a)@.len() >= 1,
+            a@.len() == old(a)@.len(),
+            // a is being modified here with swap operations, not including a set function, hence handled.
+    {
         tmp = a[hi];
         a[hi] = a[lo];
         a[lo] = tmp;
@@ -24,4 +32,9 @@ pub fn reverse(a: &mut [i32])
     }
 }
 
+fn main() {} // Added by AI
+
 } // verus!
+
+// Score: (0, 1)
+// Safe: True
