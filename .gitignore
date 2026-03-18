@@ -1,6 +1,10 @@
 .claude
 .ruff_cache
-target
+.venv
 
+target
 verus
+verus-proof-synthesis
+
 !benchmark0/verus
+intermediate*
