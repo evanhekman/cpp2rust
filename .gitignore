@@ -4,6 +4,7 @@
 target
 
 verus
+verus-repo
 verus-proof-synthesis
 intermediate*
 
