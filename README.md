@@ -73,6 +73,10 @@ Validator should be able to take `rust/` and `prepost/` inputs and produce `vali
     - the OPENAI_KEY
     - `aoai_generation_model` and `aoai_debug_model`
   - *then* run with `python main.py --input input_filepath --output output_filepath`
+## Using Justfile
+  - `just verus FILE` for verifying files
+  - `just old-verus FILE` to use pinned build inside autoverus
+  - `just autoverus INPUT OUTPUT` to use autoverus
 
 # Benchmarks
 ## `benchmark0`
