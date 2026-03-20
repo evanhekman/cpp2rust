@@ -29,7 +29,9 @@ Runs static analysis on the C++, finding things like unnecessary parameters or i
 
 Once scanned, the preprocessor should be able to generate the new Rust function signature using the C++ -> Rust keyword mappings. The preprocessor then provides two things to the synthesizer:
   - the new rust function signature
-  - the AST for the C++ code (whitespace and punctuation filtered out)
+  - the simplified AST for the C++ code (whitespace and punctuation filtered out)
+    - this AST can be constructed from the treesitter CST
+    - example algorithm used to generate benchmark is in `scripts/gen_ast.py`
 
 Preprocessor should be able to take `cpp/` inputs and produce `processed/` outputs.
 
@@ -38,9 +40,9 @@ Synthesizer is very similar to EECS498 A3, consisting of:
   - A Rust grammar and production rules
   - Evaluation queue and search algorithm
   - Heuristics to speed up the search
-Note that the synthesizer assumes the Rust function signature is correct and that no imports are required. The synthesizer also owns the test case generation process so it is easy to generate more test cases if needed.
+Note that the synthesizer assumes the Rust function signature is correct and that no imports are required. The synthesizer also owns the test case generation process so it is easy to generate more test cases if needed. Once the .rs candidate is generated, it is combined with the pre/post to create a `stitched/` output.
 
-Synthesizer should be able to take `processed/` inputs and produce `rust/` outputs.
+Synthesizer should be able to take `processed/` inputs and produce `stitched/` outputs.
 
 ## Validator
 The validator takes a rust candidate program and a set of pre/post conditions, then tries to create a verus proof to prove correctness, yielding one of three results:
