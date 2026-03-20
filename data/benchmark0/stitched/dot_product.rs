@@ -1,9 +1,3 @@
-// Pre:  slices have equal length, at most 66051 elements
-//       (66051 is the largest n such that 255*255*n <= u32::MAX, i.e. the u32 accumulator never overflows)
-// Post: result equals the true dot product
-
-
-
 use vstd::prelude::*;
 
 verus! {
@@ -22,7 +16,11 @@ pub fn dot(a: &[u8], b: &[u8]) -> (result: u32)
     ensures
         result as int == partial_dot(a@, b@, a@.len() as int),
 {
-    assume(false);
+    let mut sum: u32 = 0;
+    for i in 0..a.len() {
+        sum += (a[i] as u32) * (b[i] as u32);
+    }
+    sum
 }
 
 } // verus!

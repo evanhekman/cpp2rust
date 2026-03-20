@@ -1,0 +1,96 @@
+{
+  "name": "max_even_indexed",
+  "params": [
+    {
+      "name": "a",
+      "type": "&[i32]"
+    }
+  ],
+  "return_type": "i32",
+  "ast": [
+    {
+      "op": "let",
+      "args": [
+        { "var": "m" },
+        {
+          "op": "[]",
+          "args": [
+            { "var": "a" },
+            { "lit": "0" }
+          ]
+        }
+      ]
+    },
+    {
+      "init": {
+        "op": "let",
+        "args": [
+          { "var": "p" },
+          {
+            "op": "+",
+            "args": [
+              { "var": "a" },
+              { "lit": "2" }
+            ]
+          }
+        ]
+      },
+      "condition": {
+        "op": "<",
+        "args": [
+          { "var": "p" },
+          {
+            "op": "+",
+            "args": [
+              { "var": "a" },
+              { "var": "n" }
+            ]
+          }
+        ]
+      },
+      "update": {
+        "op": "+=",
+        "args": [
+          { "var": "p" },
+          { "lit": "2" }
+        ]
+      },
+      "body": [
+        {
+          "condition": {
+            "op": ">",
+            "args": [
+              {
+                "op": "*",
+                "args": [
+                  { "var": "p" }
+                ]
+              },
+              { "var": "m" }
+            ]
+          },
+          "then": [
+            {
+              "op": "=",
+              "args": [
+                { "var": "m" },
+                {
+                  "op": "*",
+                  "args": [
+                    { "var": "p" }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "op": "return",
+      "args": [
+        { "var": "m" }
+      ]
+    }
+  ]
+}
