@@ -15,16 +15,21 @@ rust candidate -> │ validator │
 ```
 
 ## Preprocessor
-Runs static analysis on the C++, finding things like unnecessary parameters or internal try/catch blocks. These are structural aspects of the C++ that must be changed to produce acceptable Rust code. Specific things the preprocessor needs to look for:
-  - self-contained throw/catch blocks that are turned into early returns
-  - pointer-length params (encoded in rust fat pointers directly)
-  - read-only or write-through pointers (whether rust needs `mut`)
-  - pointer arithmetic (converted to index-based loop)
+Runs static analysis on the C++, finding things like unnecessary parameters or internal try/catch blocks. These are structural aspects of the C++ that must be changed to produce acceptable Rust code. There are *three things* the preprocessor needs to scan for that will impact the new rust function signature: 
+  - Pointer-length param
+    - requires a T* param
+    - requires an int param
+    - requires the int param is readonly
+    - requires the int param is only ever used as a bound check against the T* param
+  - Mutable pointer
+    - pointer is written to
+  - Nullable pointer
+    - pointer is null-checked at some point
+  - (if our dataset included functions that could exit with error, we would need to scan for that as well)
 
-The preprocessor is responsible for providing three things to the synthesizer:
-  - a rust function signature (might not be an exact match for the original C++ function)
-  - an AST-like structure containing the relevant information about the C++ (used to guide heuristic search during synthesis)
-  - a set of input/output examples on the C++, translated to equivalent rust
+Once scanned, the preprocessor should be able to generate the new Rust function signature using the C++ -> Rust keyword mappings. The preprocessor then provides two things to the synthesizer:
+  - the new rust function signature
+  - the AST for the C++ code (whitespace and punctuation filtered out)
 
 Preprocessor should be able to take `cpp/` inputs and produce `processed/` outputs.
 
@@ -33,6 +38,7 @@ Synthesizer is very similar to EECS498 A3, consisting of:
   - A Rust grammar and production rules
   - Evaluation queue and search algorithm
   - Heuristics to speed up the search
+Note that the synthesizer assumes the Rust function signature is correct and that no imports are required. The synthesizer also owns the test case generation process so it is easy to generate more test cases if needed.
 
 Synthesizer should be able to take `processed/` inputs and produce `rust/` outputs.
 

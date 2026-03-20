@@ -1,0 +1,42 @@
+# C++ grammar symbols — derived from benchmark0 source functions
+# (dot_product, reverse, max_even_indexed, exception/first_negative)
+# This is the terminal alphabet the preprocessor needs to recognize via tree-sitter.
+
+# Primitive types
+int  void  uint8_t
+
+# Pointer types
+T*
+
+# Keywords
+for  while  if  return  try  catch  throw
+
+# Arithmetic operators
++  -  *
+
+# Comparison operators
+<  >  <=  >=  ==  !=
+
+# Assignment / increment
+=  +=  ++  --
+
+# Array / pointer notation
+a[i]        # array index
+*ptr        # pointer dereference
+ptr + n     # pointer offset
+ptr++  ptr--  # pointer advance/retreat (postfix)
+
+# Literals
+# plain integers: 0, 1, 2, -1, ...
+
+
+# --- Asymmetries: transforms the preprocessor must perform ---
+#
+# T*, int n          ->  &[T]            fold length param into slice
+# T* (written to)    ->  &mut [T]        detect mutation, upgrade to mut slice
+# ptr++ / ptr--      ->  index variable  pointer arithmetic -> index
+# *ptr               ->  slice[idx]      dereference -> index
+# throw / catch      ->  return          exception -> early return
+# a[i] * b[i] (int)  ->  (a[i] as u32) * (b[i] as u32)   type widening before op
+# int return         ->  u32 or i32      semantic type selection
+# for (p=a+2; p<a+n; p+=2)  ->  while i < a.len() { ... i += 2; }   stride loop

@@ -1,0 +1,102 @@
+{
+  "name": "reverse",
+  "params": [
+    {
+      "name": "a",
+      "type": "&mut [i32]"
+    }
+  ],
+  "return_type": null,
+  "ast": [
+    {
+      "op": "let",
+      "args": [
+        { "var": "lo" },
+        { "var": "a" }
+      ]
+    },
+    {
+      "op": "let",
+      "args": [
+        { "var": "hi" },
+        {
+          "op": "-",
+          "args": [
+            {
+              "op": "+",
+              "args": [
+                { "var": "a" },
+                { "var": "n" }
+              ]
+            },
+            { "lit": "1" }
+          ]
+        }
+      ]
+    },
+    {
+      "condition": {
+        "op": "<",
+        "args": [
+          { "var": "lo" },
+          { "var": "hi" }
+        ]
+      },
+      "body": [
+        {
+          "op": "let",
+          "args": [
+            { "var": "tmp" },
+            {
+              "op": "*",
+              "args": [
+                { "var": "lo" }
+              ]
+            }
+          ]
+        },
+        {
+          "op": "=",
+          "args": [
+            {
+              "op": "*",
+              "args": [
+                { "var": "lo" }
+              ]
+            },
+            {
+              "op": "*",
+              "args": [
+                { "var": "hi" }
+              ]
+            }
+          ]
+        },
+        {
+          "op": "=",
+          "args": [
+            {
+              "op": "*",
+              "args": [
+                { "var": "hi" }
+              ]
+            },
+            { "var": "tmp" }
+          ]
+        },
+        {
+          "op": "++",
+          "args": [
+            { "var": "lo" }
+          ]
+        },
+        {
+          "op": "--",
+          "args": [
+            { "var": "hi" }
+          ]
+        }
+      ]
+    }
+  ]
+}
