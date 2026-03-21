@@ -52,10 +52,11 @@ pub fn build_grammar(
 
     // ── Block ─────────────────────────────────────────────────────────────────
     g.entry("Block".into()).or_default().extend([
-        prod("BlockSingle",  "Block", vec!["Stmt"],                      "{ {0} }"),
-        prod("BlockSeq",     "Block", vec!["Stmt", "Stmt"],              "{ {0} {1} }"),
-        prod("BlockSeq3",    "Block", vec!["Stmt", "Stmt", "Stmt"],      "{ {0} {1} {2} }"),
-        prod("BlockSeq4",    "Block", vec!["Stmt","Stmt","Stmt","Stmt"], "{ {0} {1} {2} {3} }"),
+        prod("BlockSingle",  "Block", vec!["Stmt"],                               "{ {0} }"),
+        prod("BlockSeq",     "Block", vec!["Stmt", "Stmt"],                       "{ {0} {1} }"),
+        prod("BlockSeq3",    "Block", vec!["Stmt", "Stmt", "Stmt"],               "{ {0} {1} {2} }"),
+        prod("BlockSeq4",    "Block", vec!["Stmt","Stmt","Stmt","Stmt"],           "{ {0} {1} {2} {3} }"),
+        prod("BlockSeq5",    "Block", vec!["Stmt","Stmt","Stmt","Stmt","Stmt"],    "{ {0} {1} {2} {3} {4} }"),
     ]);
 
     // ── Stmt ──────────────────────────────────────────────────────────────────
