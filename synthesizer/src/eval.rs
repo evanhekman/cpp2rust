@@ -370,7 +370,7 @@ pub fn eval_block(node: &Node, env: &mut Env, grammar: &Grammar) -> Result<(), E
 pub fn eval_stmt(node: &Node, env: &mut Env, grammar: &Grammar) -> Result<(), EvalError> {
     match node.kind.as_str() {
         // ── Existing statement kinds ─────────────────────────────────────────
-        "BlockSingle" | "BlockSeq" | "BlockSeq3" | "BlockSeq4" => {
+        "BlockSingle" | "BlockSeq" | "BlockSeq3" | "BlockSeq4" | "BlockSeq5" => {
             eval_block(node, env, grammar)
         }
 
