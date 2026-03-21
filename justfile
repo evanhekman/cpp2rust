@@ -1,6 +1,30 @@
 root := justfile_directory()
 python := root / ".venv/bin/python"
 autoverus := root / "verus-proof-synthesis/autoverus"
+synth  := root / "target/release/synth"
+bench  := root / "target/release/bench"
+processed := root / "data/benchmark0/processed"
+symbols := root / "synthesizer/symbols.txt"
+
+# build all synthesizer binaries
+build:
+    cargo build --release
+
+# synthesize benchmark0 target(s)
+# usage: just synthesize              → all four targets
+#        just synthesize dot_product  → one target
+synthesize target="benchmark0":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ "{{target}}" = "benchmark0" ]; then
+        {{bench}} \
+            --dataset {{processed}} \
+            --symbols {{symbols}}
+    else
+        {{synth}} \
+            --file {{processed}}/{{target}}.json \
+            --symbols {{symbols}}
+    fi
 
 # run verus on a file
 verus FILE:
