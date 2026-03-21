@@ -1,17 +1,107 @@
 use crate::ast::{Child, Node};
 use crate::loader::CppFeatures;
 
-pub fn score(node: &Node, features: Option<&CppFeatures>) -> i64 {
+pub fn score(node: &Node, features: Option<&CppFeatures>, ast_hints: Option<&[String]>) -> i64 {
     let mut cost = 0i64;
-    if let Some(f) = features {
-        // cost += h_count_match(node, f);
+    if let Some(hints) = ast_hints {
+        // AST-derived heuristic: prioritise the verbatim translation,
+        // explore deviations proportional to their structural distance.
+        cost += h_ast_ordering(node, hints);
+        cost += h_ast_absent_penalty(node, hints);
+    } else if let Some(f) = features {
+        // Fallback: text-scanned operator heuristics (dataset0 compat)
         cost += h_ordering_match(node, f);
         cost += h_absent_penalty(node, f);
         cost += h_overcount_penalty(node, f);
     }
-    // cost += h_operator_reuse(node);
-    // cost += h_duplicate_arg(node);
     cost
+}
+
+// ── AST-based heuristics ──────────────────────────────────────────────────────
+
+/// Reward (-1 per matched feature) for the longest common prefix between the
+/// expected Rust-node sequence (derived from the C++ AST) and the candidate's
+/// DFS pre-order sequence.  The verbatim translation scores lowest and is
+/// explored first; deviations cost proportionally.
+pub fn h_ast_ordering(node: &Node, hints: &[String]) -> i64 {
+    let mut rust_seq: Vec<String> = Vec::new();
+    collect_ast_sequence(node, &mut rust_seq);
+
+    let lcp = hints
+        .iter()
+        .zip(rust_seq.iter())
+        .take_while(|(hint, rust_op)| ast_feature_matches(rust_op, hint))
+        .count();
+
+    // Penalize programs with too few OR too many scored nodes relative to the hint length.
+    // This creates a gradient that prioritises programs with exactly |hints| scored nodes,
+    // which are the "complete-structure" programs closest to the verbatim translation.
+    let excess = rust_seq.len().saturating_sub(hints.len()) as i64;
+    let deficiency = hints.len().saturating_sub(rust_seq.len()) as i64;
+
+    -(lcp as i64) + excess + deficiency
+}
+
+/// Penalty (+3) for each scored Rust node whose kind has no corresponding
+/// entry in the expected hint sequence.  Keeps the verbatim candidate at score
+/// 0 while pushing structurally wrong candidates to the back of the queue.
+pub fn h_ast_absent_penalty(node: &Node, hints: &[String]) -> i64 {
+    let mut cost = 0i64;
+    ast_absent_rec(node, hints, &mut cost);
+    cost
+}
+
+fn ast_absent_rec(node: &Node, hints: &[String], cost: &mut i64) {
+    if is_ast_scored_node(node) {
+        let present = hints.iter().any(|h| ast_feature_matches(&node.kind, h));
+        if !present {
+            *cost += 3;
+        }
+    }
+    for child in &node.children {
+        if let Child::Node(n) = child {
+            ast_absent_rec(n, hints, cost);
+        }
+    }
+}
+
+/// True if a Rust AST node kind satisfies an expected hint prefix.
+///
+/// Rules:
+///  - "StmtFor" matches StmtFor_* AND StmtWhile (both are iteration)
+///  - "ExprAdd"/"ExprSub"/… match the typed variants (ExprAdd_usize, ExprAdd_u32, …)
+///  - "ExprIndex" matches ExprIndex_* (any slice param)
+///  - "ExprLen"   matches ExprLen_*
+///  - "StmtLetMut" / "StmtAssign" / "StmtCompoundPlus" / etc. match their suffixed variants
+///  - All other hints use simple prefix matching
+fn ast_feature_matches(rust_kind: &str, hint: &str) -> bool {
+    match hint {
+        "StmtFor" => rust_kind.starts_with("StmtFor") || rust_kind == "StmtWhile",
+        _ => rust_kind.starts_with(hint),
+    }
+}
+
+/// Collect scored nodes in DFS pre-order for the AST heuristic.
+/// Unlike the scalar heuristic, this includes StmtReturn (since the AST
+/// may emit "StmtReturn" for both return and throw).
+fn collect_ast_sequence(node: &Node, seq: &mut Vec<String>) {
+    if is_ast_scored_node(node) {
+        seq.push(node.kind.clone());
+    }
+    for child in &node.children {
+        if let Child::Node(n) = child {
+            collect_ast_sequence(n, seq);
+        }
+    }
+}
+
+fn is_ast_scored_node(node: &Node) -> bool {
+    !node.children.is_empty()
+        && !node.kind.starts_with("BlockSingle")
+        && !node.kind.starts_with("BlockSeq")
+        && !node.kind.starts_with("FnDef")
+        && !node.kind.starts_with("ExprCast")  // casts are implicit in C++; don't penalise
+        && (node.kind.starts_with("Expr") || node.kind.starts_with("Stmt"))
 }
 
 /// (-1) for each C++ operator whose count in the Rust candidate exactly matches

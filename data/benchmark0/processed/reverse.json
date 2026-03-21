@@ -6,7 +6,7 @@
       "type": "&mut [i32]"
     }
   ],
-  "return_type": null,
+  "return_type": "()",
   "ast": [
     {
       "op": "let",

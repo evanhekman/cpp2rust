@@ -1,61 +1,66 @@
 use crate::ast::Node;
-use std::cmp::Ordering;
-use std::collections::BinaryHeap;
+use std::collections::{BTreeMap, VecDeque};
 
-struct Entry {
-    score: i64,
-    counter: u64,
-    node: Node,
-}
-
-impl Ord for Entry {
-    fn cmp(&self, other: &Self) -> Ordering {
-        // min-heap by score, then by insertion order (lower counter = earlier)
-        other
-            .score
-            .cmp(&self.score)
-            .then(other.counter.cmp(&self.counter))
-    }
-}
-impl PartialOrd for Entry {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-impl PartialEq for Entry {
-    fn eq(&self, other: &Self) -> bool {
-        self.cmp(other) == Ordering::Equal
-    }
-}
-impl Eq for Entry {}
-
+/// Best-first worklist with optional capacity bounding.
+/// Items are ordered by score (ascending); ties are FIFO.
+/// When capacity is set and exceeded, the *worst* (highest-score) item is evicted.
 pub struct Worklist {
-    heap: BinaryHeap<Entry>,
-    counter: u64,
+    map: BTreeMap<i64, VecDeque<Node>>,
+    total: usize,
+    max_size: usize,
 }
 
 impl Worklist {
     pub fn new() -> Self {
+        Self::with_capacity(usize::MAX)
+    }
+
+    pub fn with_capacity(max_size: usize) -> Self {
         Self {
-            heap: BinaryHeap::new(),
-            counter: 0,
+            map: BTreeMap::new(),
+            total: 0,
+            max_size,
         }
     }
+
     pub fn push(&mut self, node: Node, score: i64) {
-        self.heap.push(Entry {
-            score,
-            counter: self.counter,
-            node,
-        });
-        self.counter += 1;
+        if self.total >= self.max_size {
+            // Check whether new item is better than the current worst.
+            if let Some((&worst_score, _)) = self.map.iter().next_back() {
+                if score > worst_score {
+                    // New item is strictly worse than everything we keep; discard it.
+                    return;
+                }
+                // score <= worst_score: evict one worst item (FIFO rotation within same tier)
+                // Evict one item from the worst bucket.
+                let remove_bucket = self.map.get_mut(&worst_score).unwrap();
+                remove_bucket.pop_back();
+                if remove_bucket.is_empty() {
+                    self.map.remove(&worst_score);
+                }
+                self.total -= 1;
+            }
+        }
+        self.map.entry(score).or_default().push_back(node);
+        self.total += 1;
     }
+
     pub fn pop(&mut self) -> Option<Node> {
-        self.heap.pop().map(|e| e.node)
+        let (&score, _) = self.map.iter().next()?;
+        let bucket = self.map.get_mut(&score).unwrap();
+        let node = bucket.pop_front().unwrap();
+        if bucket.is_empty() {
+            self.map.remove(&score);
+        }
+        self.total -= 1;
+        Some(node)
     }
+
     pub fn is_empty(&self) -> bool {
-        self.heap.is_empty()
+        self.total == 0
     }
+
     pub fn len(&self) -> usize {
-        self.heap.len()
+        self.total
     }
 }

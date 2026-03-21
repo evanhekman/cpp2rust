@@ -11,6 +11,7 @@ mod eval;
 mod grammar;
 mod heuristics;
 mod loader;
+mod oracle;
 mod worklist;
 
 use ast::{Child, Node};
@@ -51,13 +52,34 @@ fn fmt_count(n: u128) -> String {
 }
 
 fn test_candidate(node: &Node, target: &loader::Target, grammar: &grammar::Grammar) -> bool {
-    target.test_cases.iter().all(|tc| {
+    let cases = &target.test_cases;
+    if cases.is_empty() {
+        return true;
+    }
+
+    let is_void = target.return_type == "()" || target.return_type.is_empty();
+    let check = |tc: &loader::TestCase| -> bool {
         let env = parse_env(tc, &target.params);
         match eval_fn(node, &env, grammar) {
-            Some(val) => val.matches_str(&tc.expected_output),
+            Some((val, final_env)) => {
+                if is_void {
+                    if let Some(mut_param) = target.params.iter().find(|p| p.ty.starts_with("&mut")) {
+                        final_env.get(&mut_param.name)
+                            .map(|v| v.matches_str(&tc.expected_output))
+                            .unwrap_or(false)
+                    } else {
+                        val.matches_str(&tc.expected_output)
+                    }
+                } else {
+                    val.matches_str(&tc.expected_output)
+                }
+            }
             None => false,
         }
-    })
+    };
+
+    // Quick filter: test against case 0 only; run all if it passes.
+    check(&cases[0]) && cases[1..].iter().all(check)
 }
 
 fn synthesize(
@@ -67,12 +89,12 @@ fn synthesize(
     timeout: u64,
     interrupted: &Arc<AtomicBool>,
 ) -> Option<String> {
-    let mut grammar = build_grammar(literals, &target.params, &target.return_type);
+    let mut grammar = build_grammar(literals, &target.params, &target.local_vars, &target.return_type);
     let kind = register_fn_def_known(target, &mut grammar);
     let candidates_possible = count_programs(&grammar, &kind, max_depth);
 
     let root = Node::new(&kind, vec![Child::Hole("Block".into())], 0);
-    let mut worklist = Worklist::new();
+    let mut worklist = Worklist::with_capacity(50_000);
     worklist.push(root, 0);
 
     let deadline = Instant::now() + Duration::from_secs(timeout);
@@ -94,6 +116,12 @@ fn synthesize(
 
         if partial.is_complete() {
             candidates_tried += 1;
+            let cand_score = score(&partial, target.cpp_features.as_ref(), target.ast_hints.as_deref());
+            if cand_score == -7 && candidates_tried <= 5 {
+                if let Ok(code) = render(&partial, &grammar) {
+                    println!("  [score=-7 cand {}] {}", candidates_tried, code);
+                }
+            }
             if test_candidate(&partial, target, &grammar) {
                 return render(&partial, &grammar).ok();
             }
@@ -137,7 +165,7 @@ fn synthesize(
                 continue;
             }
             let new_partial = partial.replace_at_path(&path, replacement);
-            let s = score(&new_partial, target.cpp_features.as_ref());
+            let s = score(&new_partial, target.cpp_features.as_ref(), target.ast_hints.as_deref());
             worklist.push(new_partial, s);
         }
     }
@@ -203,7 +231,7 @@ fn main() {
             std::process::exit(1);
         }
     };
-    let target = if let Some(ref file) = cli.file {
+    let mut target = if let Some(ref file) = cli.file {
         match load_target_file(file) {
             Ok(t) => t,
             Err(e) => { eprintln!("Error: {}", e); std::process::exit(1); }
@@ -218,6 +246,28 @@ fn main() {
             Err(e) => { eprintln!("Error: {}", e); std::process::exit(1); }
         }
     };
+
+    // If no hand-written test cases, compile the C++ oracle and generate them.
+    if target.test_cases.is_empty() {
+        let cpp_source = target.cpp_source.clone().unwrap_or_else(|| {
+            eprintln!("Error: no test_cases and no C++ source found — cannot synthesize.");
+            std::process::exit(1);
+        });
+        print!("Compiling C++ oracle... ");
+        let _ = std::io::Write::flush(&mut std::io::stdout());
+        let binary = oracle::compile_oracle(
+            &target.name, &target.params, &target.return_type, &cpp_source,
+        ).unwrap_or_else(|e| { eprintln!("Error: {}", e); std::process::exit(1); });
+        println!("done.");
+
+        print!("Generating test cases... ");
+        let _ = std::io::Write::flush(&mut std::io::stdout());
+        let cases = oracle::generate_test_cases(
+            &binary, &target.params, &target.return_type, /*seed=*/42, /*count=*/8,
+        ).unwrap_or_else(|e| { eprintln!("Error: {}", e); std::process::exit(1); });
+        println!("{} generated.", cases.len());
+        target.test_cases = cases;
+    }
 
     let param_sig = target
         .params
@@ -235,6 +285,12 @@ fn main() {
         println!("Example:   {}", ex);
     }
     println!("Tests:     {} cases", target.test_cases.len());
+    if !target.local_vars.is_empty() {
+        println!("Locals:    {}", target.local_vars.iter().map(|(n,t)| format!("{}: {}", n, t)).collect::<Vec<_>>().join(", "));
+    }
+    if let Some(hints) = &target.ast_hints {
+        println!("AST hints: {}", hints.join(" → "));
+    }
     println!(
         "Literals:  {}  Max depth: {}  Timeout: {}s\n",
         literals.len(),
