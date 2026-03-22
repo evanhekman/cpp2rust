@@ -1,0 +1,40 @@
+{
+  "name": "sum_array",
+  "params": [
+    { "name": "a", "type": "&[i32]" }
+  ],
+  "return_type": "i32",
+  "ast": [
+    {
+      "op": "let",
+      "args": [ { "var": "s" }, { "lit": "0" } ]
+    },
+    {
+      "init": {
+        "op": "let",
+        "args": [ { "var": "i" }, { "lit": "0" } ]
+      },
+      "condition": {
+        "op": "<",
+        "args": [ { "var": "i" }, { "var": "n" } ]
+      },
+      "update": {
+        "op": "++",
+        "args": [ { "var": "i" } ]
+      },
+      "body": [
+        {
+          "op": "+=",
+          "args": [
+            { "var": "s" },
+            { "op": "[]", "args": [ { "var": "a" }, { "var": "i" } ] }
+          ]
+        }
+      ]
+    },
+    {
+      "op": "return",
+      "args": [ { "var": "s" } ]
+    }
+  ]
+}

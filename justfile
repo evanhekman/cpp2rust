@@ -4,6 +4,7 @@ autoverus := root / "verus-proof-synthesis/autoverus"
 synth  := root / "target/release/synth"
 bench  := root / "target/release/bench"
 processed := root / "data/benchmark0/processed"
+synth_bench := root / "data/synth_benchmark/processed"
 symbols := root / "synthesizer/symbols.txt"
 
 # build all synthesizer binaries
@@ -23,6 +24,22 @@ synthesize target="benchmark0":
     else
         {{synth}} \
             --file {{processed}}/{{target}}.json \
+            --symbols {{symbols}}
+    fi
+
+# run controlled synthesis benchmark (depth 4-8)
+# usage: just synth-bench            → all five targets
+#        just synth-bench sum_array  → one target
+synth-bench target="all":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if [ "{{target}}" = "all" ]; then
+        {{bench}} \
+            --dataset {{synth_bench}} \
+            --symbols {{symbols}}
+    else
+        {{synth}} \
+            --file {{synth_bench}}/{{target}}.json \
             --symbols {{symbols}}
     fi
 
