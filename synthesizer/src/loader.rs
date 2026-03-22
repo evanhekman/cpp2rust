@@ -37,6 +37,9 @@ pub struct Target {
     // Derived expected-Rust-node sequence for the AST heuristic (not in JSON)
     #[serde(skip)]
     pub ast_hints: Option<Vec<String>>,
+    // Expected block sizes in DFS pre-order (one per Block node in the correct tree)
+    #[serde(skip)]
+    pub block_sizes: Vec<usize>,
     // Local variables extracted from the C++ AST: (name, rust_type)
     #[serde(skip)]
     pub local_vars: Vec<(String, String)>,
@@ -96,6 +99,7 @@ fn finish_load(mut t: Target, json_path: &Path) -> Result<Target, String> {
             .map(|p| p.name.as_str())
             .collect();
         t.ast_hints = Some(extract_ast_hints(ast, &slice_names));
+        t.block_sizes = extract_block_sizes(ast);
         t.local_vars = extract_local_vars(ast, &t.params, &t.return_type);
     }
     Ok(t)
@@ -115,16 +119,87 @@ pub fn extract_ast_hints(ast: &serde_json::Value, slice_params: &[&str]) -> Vec<
     seq
 }
 
+/// Walk the C++ AST and collect expected block sizes in DFS pre-order.
+/// Emits one entry per block-like construct (function body, loop body, if-then, if-else).
+pub fn extract_block_sizes(ast: &serde_json::Value) -> Vec<usize> {
+    let mut sizes = Vec::new();
+    if let Some(stmts) = ast.as_array() {
+        sizes.push(stmts.len());
+        for stmt in stmts {
+            collect_block_sizes_stmt(stmt, &mut sizes);
+        }
+    }
+    sizes
+}
+
+fn collect_block_sizes_stmt(node: &serde_json::Value, sizes: &mut Vec<usize>) {
+    // For loop: has "init", "condition", "update", "body"
+    if node.get("init").is_some() {
+        if let Some(body) = node["body"].as_array() {
+            sizes.push(body.len());
+            for s in body { collect_block_sizes_stmt(s, sizes); }
+        }
+        return;
+    }
+    // While loop: "condition" + "body", no "init"
+    if node.get("condition").is_some() && node.get("body").is_some() {
+        if let Some(body) = node["body"].as_array() {
+            sizes.push(body.len());
+            for s in body { collect_block_sizes_stmt(s, sizes); }
+        }
+        return;
+    }
+    // If statement: "condition" + "then" (optional "else")
+    if node.get("condition").is_some() && node.get("then").is_some() {
+        if let Some(then) = node["then"].as_array() {
+            sizes.push(then.len());
+            for s in then { collect_block_sizes_stmt(s, sizes); }
+        }
+        if let Some(els) = node.get("else").and_then(|v| v.as_array()) {
+            sizes.push(els.len());
+            for s in els { collect_block_sizes_stmt(s, sizes); }
+        }
+        return;
+    }
+    // Try/catch: visit body
+    if node.get("catch").is_some() {
+        if let Some(body) = node["body"].as_array() {
+            sizes.push(body.len());
+            for s in body { collect_block_sizes_stmt(s, sizes); }
+        }
+    }
+}
+
 fn visit_stmt(node: &serde_json::Value, slices: &[&str], seq: &mut Vec<String>) {
     // ── For loop: has "init", "condition", "update", "body" ──────────────────
     if node.get("init").is_some() {
         let ptr_loop = is_pointer_init(&node["init"], slices);
-        seq.push(if ptr_loop { "StmtWhile" } else { "StmtFor" }.into());
+        let hint = if ptr_loop {
+            "StmtWhile".to_string()
+        } else {
+            // Emit variable-specific StmtFor_<varname> hint
+            let loop_var = node["init"]["args"].as_array()
+                .and_then(|a| a.first())
+                .and_then(|v| v.get("var"))
+                .and_then(|v| v.as_str());
+            match loop_var {
+                Some(v) => format!("StmtFor_{}", v),
+                None => "StmtFor".to_string(),
+            }
+        };
+        seq.push(hint);
         if ptr_loop {
-            // While loop: condition is explicit in Rust
             visit_expr(&node["condition"], slices, seq);
+        } else {
+            // Standard C++ for loop: upper bound is `n` (slice length).
+            // Emit ExprLen hint so the search prefers a.len() over literal ranges.
+            let upper_is_var = node["condition"]["args"].as_array()
+                .and_then(|a| a.get(1))
+                .and_then(|v| v.get("var")).is_some();
+            if upper_is_var {
+                seq.push("ExprLen".to_string());
+            }
         }
-        // For StmtFor: condition is absorbed into Rust's range (0..n), skip it
         visit_stmts(&node["body"], slices, seq);
         return;
     }
@@ -160,7 +235,13 @@ fn visit_stmt(node: &serde_json::Value, slices: &[&str], seq: &mut Vec<String>) 
 
     match op {
         "let" => {
-            seq.push("StmtLetMut".into());
+            // Emit variable-specific StmtLetMut_<varname>
+            let var_name = args.and_then(|a| a.first())
+                .and_then(|v| v.get("var")).and_then(|v| v.as_str());
+            seq.push(match var_name {
+                Some(v) => format!("StmtLetMut_{}", v),
+                None => "StmtLetMut".to_string(),
+            });
             if let Some(a) = args { if a.len() > 1 { visit_expr(&a[1], slices, seq); } }
         }
         "return" => {
@@ -173,21 +254,50 @@ fn visit_stmt(node: &serde_json::Value, slices: &[&str], seq: &mut Vec<String>) 
             if let Some(a) = args { if let Some(e) = a.first() { visit_expr(e, slices, seq); } }
         }
         "+=" => {
-            seq.push("StmtCompoundPlus".into());
+            let var_name = args.and_then(|a| a.first())
+                .and_then(|v| v.get("var")).and_then(|v| v.as_str());
+            seq.push(match var_name {
+                Some(v) => format!("StmtCompoundPlus_{}", v),
+                None => "StmtCompoundPlus".to_string(),
+            });
             if let Some(a) = args { if a.len() > 1 { visit_expr(&a[1], slices, seq); } }
         }
         "-=" => {
-            seq.push("StmtCompoundMinus".into());
+            let var_name = args.and_then(|a| a.first())
+                .and_then(|v| v.get("var")).and_then(|v| v.as_str());
+            seq.push(match var_name {
+                Some(v) => format!("StmtCompoundMinus_{}", v),
+                None => "StmtCompoundMinus".to_string(),
+            });
             if let Some(a) = args { if a.len() > 1 { visit_expr(&a[1], slices, seq); } }
         }
-        "++" => seq.push("StmtCompoundPlus".into()),
-        "--" => seq.push("StmtCompoundMinus".into()),
+        "++" => {
+            let var_name = args.and_then(|a| a.first())
+                .and_then(|v| v.get("var")).and_then(|v| v.as_str());
+            seq.push(match var_name {
+                Some(v) => format!("StmtCompoundPlus_{}", v),
+                None => "StmtCompoundPlus".to_string(),
+            });
+        }
+        "--" => {
+            let var_name = args.and_then(|a| a.first())
+                .and_then(|v| v.get("var")).and_then(|v| v.as_str());
+            seq.push(match var_name {
+                Some(v) => format!("StmtCompoundMinus_{}", v),
+                None => "StmtCompoundMinus".to_string(),
+            });
+        }
         "=" => {
             if let Some(a) = args {
                 if a.first().map(|l| is_slice_lvalue(l)).unwrap_or(false) {
                     seq.push("StmtSliceAssign".into());
                 } else {
-                    seq.push("StmtAssign".into());
+                    let var_name = a.first()
+                        .and_then(|v| v.get("var")).and_then(|v| v.as_str());
+                    seq.push(match var_name {
+                        Some(v) => format!("StmtAssign_{}", v),
+                        None => "StmtAssign".to_string(),
+                    });
                 }
                 if a.len() > 1 { visit_expr(&a[1], slices, seq); }
             }

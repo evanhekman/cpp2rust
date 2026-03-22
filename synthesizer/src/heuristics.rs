@@ -1,13 +1,18 @@
 use crate::ast::{Child, Node};
 use crate::loader::CppFeatures;
 
-pub fn score(node: &Node, features: Option<&CppFeatures>, ast_hints: Option<&[String]>) -> i64 {
+pub fn score(node: &Node, features: Option<&CppFeatures>, ast_hints: Option<&[String]>, block_sizes: Option<&[usize]>) -> i64 {
     let mut cost = 0i64;
     if let Some(hints) = ast_hints {
         // AST-derived heuristic: prioritise the verbatim translation,
         // explore deviations proportional to their structural distance.
         cost += h_ast_ordering(node, hints);
         cost += h_ast_absent_penalty(node, hints);
+        cost += h_required_hint_penalty(node, hints);
+        cost += h_structural_checks(node, hints);
+        if let Some(sizes) = block_sizes {
+            cost += h_block_sizes(node, sizes);
+        }
     } else if let Some(f) = features {
         // Fallback: text-scanned operator heuristics (dataset0 compat)
         cost += h_ordering_match(node, f);
@@ -20,24 +25,32 @@ pub fn score(node: &Node, features: Option<&CppFeatures>, ast_hints: Option<&[St
 // ── AST-based heuristics ──────────────────────────────────────────────────────
 
 /// Reward (-1 per matched feature) for the longest common prefix between the
-/// expected Rust-node sequence (derived from the C++ AST) and the candidate's
-/// DFS pre-order sequence.  The verbatim translation scores lowest and is
-/// explored first; deviations cost proportionally.
+/// expected statement sequence (derived from the C++ AST) and the candidate's
+/// DFS pre-order statement sequence.  Only Stmt-level nodes are compared here;
+/// expression nodes are handled by h_ast_absent_penalty only.
+///
+/// Limiting to statements avoids a false-scoring problem where an Expr node
+/// (e.g. ExprIndex) that appears in hints later in the sequence artificially
+/// improves a program that uses it at the wrong structural position (e.g.
+/// inside a let-init rather than inside a compound-plus body).
 pub fn h_ast_ordering(node: &Node, hints: &[String]) -> i64 {
     let mut rust_seq: Vec<String> = Vec::new();
-    collect_ast_sequence(node, &mut rust_seq);
+    collect_stmt_sequence(node, &mut rust_seq);
 
-    let lcp = hints
+    // Filter hints to only statement-level entries (same kind of nodes we collect)
+    let stmt_hints: Vec<&str> = hints.iter()
+        .filter(|h| h.starts_with("Stmt"))
+        .map(|h| h.as_str())
+        .collect();
+
+    let lcp = stmt_hints
         .iter()
         .zip(rust_seq.iter())
         .take_while(|(hint, rust_op)| ast_feature_matches(rust_op, hint))
         .count();
 
-    // Penalize programs with too few OR too many scored nodes relative to the hint length.
-    // This creates a gradient that prioritises programs with exactly |hints| scored nodes,
-    // which are the "complete-structure" programs closest to the verbatim translation.
-    let excess = rust_seq.len().saturating_sub(hints.len()) as i64;
-    let deficiency = hints.len().saturating_sub(rust_seq.len()) as i64;
+    let excess = rust_seq.len().saturating_sub(stmt_hints.len()) as i64;
+    let deficiency = stmt_hints.len().saturating_sub(rust_seq.len()) as i64;
 
     -(lcp as i64) + excess + deficiency
 }
@@ -65,6 +78,129 @@ fn ast_absent_rec(node: &Node, hints: &[String], cost: &mut i64) {
     }
 }
 
+/// Penalty (+3) when a Block node's statement count doesn't match the expected
+/// block size at that position in DFS pre-order.  Eliminates wrong BlockSeq
+/// variants early without touching any other heuristic.
+pub fn h_block_sizes(node: &Node, block_sizes: &[usize]) -> i64 {
+    let mut idx = 0usize;
+    let mut cost = 0i64;
+    check_block_sizes(node, block_sizes, &mut idx, &mut cost);
+    cost
+}
+
+fn check_block_sizes(node: &Node, expected: &[usize], idx: &mut usize, cost: &mut i64) {
+    let is_block = node.kind.starts_with("BlockSingle") || node.kind.starts_with("BlockSeq");
+    if is_block {
+        if *idx < expected.len() {
+            if node.children.len() != expected[*idx] {
+                *cost += 3;
+            }
+            *idx += 1;
+        }
+    }
+    for child in &node.children {
+        if let Child::Node(n) = child {
+            check_block_sizes(n, expected, idx, cost);
+        }
+    }
+}
+
+/// Structural position checks for for-loop expression choices.
+/// Applies to both partial and complete programs: as soon as a StmtFor's
+/// range or body is filled in with a non-Hole node, we can check position.
+///
+///  - If "ExprLen" is in hints: any StmtFor with a filled range that does NOT
+///    contain ExprLen gets +3.  This immediately penalises `for i in 0..0 { … }`
+///    vs `for i in 0..a.len() { … }` when the range hole is expanded.
+///
+///  - If "ExprIndex" is in hints: any StmtFor with a filled body that does NOT
+///    contain ExprIndex gets +3.  This immediately penalises `s += 0` vs
+///    `s += a[i]` when the body expression hole is expanded.
+pub fn h_structural_checks(node: &Node, hints: &[String]) -> i64 {
+    let needs_exprlen   = hints.iter().any(|h| h == "ExprLen");
+    let needs_exprindex = hints.iter().any(|h| h == "ExprIndex");
+    if !needs_exprlen && !needs_exprindex {
+        return 0;
+    }
+    let mut cost = 0i64;
+    structural_rec(node, needs_exprlen, needs_exprindex, &mut cost);
+    cost
+}
+
+fn structural_rec(node: &Node, need_len: bool, need_idx: bool, cost: &mut i64) {
+    if node.kind.starts_with("StmtFor") {
+        // Range = first child; body block = second child
+        if need_len {
+            match node.children.first() {
+                Some(Child::Node(range)) => {
+                    if !subtree_has_prefix(range, "ExprLen") {
+                        *cost += 3;
+                    }
+                }
+                _ => {} // Hole → not yet decided, skip
+            }
+        }
+        if need_idx {
+            match node.children.get(1) {
+                Some(Child::Node(block)) => {
+                    if !subtree_has_prefix(block, "ExprIndex") {
+                        *cost += 3;
+                    }
+                }
+                _ => {} // Hole → not yet decided, skip
+            }
+        }
+    }
+    for child in &node.children {
+        if let Child::Node(n) = child {
+            structural_rec(n, need_len, need_idx, cost);
+        }
+    }
+}
+
+fn subtree_has_prefix(node: &Node, prefix: &str) -> bool {
+    if node.kind.starts_with(prefix) {
+        return true;
+    }
+    for child in &node.children {
+        if let Child::Node(n) = child {
+            if subtree_has_prefix(n, prefix) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Penalty (+3 per Expr hint) for complete programs that are entirely missing
+/// a required Expr-type operator.  Applied only to complete programs (no holes);
+/// partial programs return 0 because missing operators may still be filled in.
+pub fn h_required_hint_penalty(node: &Node, hints: &[String]) -> i64 {
+    if !node.is_complete() {
+        return 0;
+    }
+    // Collect ALL node kind names in the program (including leaves)
+    let mut all_kinds: Vec<String> = Vec::new();
+    collect_all_kinds(node, &mut all_kinds);
+
+    hints.iter()
+        .filter(|h| h.starts_with("Expr"))
+        .map(|hint| {
+            let found = all_kinds.iter().any(|k| ast_feature_matches(k, hint));
+            if found { 0i64 } else { 3 }
+        })
+        .sum()
+}
+
+fn collect_all_kinds(node: &Node, names: &mut Vec<String>) {
+    names.push(node.kind.clone());
+    for child in &node.children {
+        if let Child::Node(n) = child {
+            collect_all_kinds(n, names);
+        }
+    }
+}
+
 /// True if a Rust AST node kind satisfies an expected hint prefix.
 ///
 /// Rules:
@@ -76,7 +212,9 @@ fn ast_absent_rec(node: &Node, hints: &[String], cost: &mut i64) {
 ///  - All other hints use simple prefix matching
 fn ast_feature_matches(rust_kind: &str, hint: &str) -> bool {
     match hint {
+        // Generic "StmtFor" (no variable) matches both StmtFor_* and StmtWhile
         "StmtFor" => rust_kind.starts_with("StmtFor") || rust_kind == "StmtWhile",
+        // Variable-specific "StmtFor_i" only matches StmtFor_i* (not StmtWhile)
         _ => rust_kind.starts_with(hint),
     }
 }
@@ -93,6 +231,24 @@ fn collect_ast_sequence(node: &Node, seq: &mut Vec<String>) {
             collect_ast_sequence(n, seq);
         }
     }
+}
+
+/// Collect only Stmt-level nodes in DFS pre-order.
+/// Used by h_ast_ordering so that Expr nodes in wrong structural positions
+/// (e.g. ExprIndex inside a let-init) don't distort the ordering score.
+fn collect_stmt_sequence(node: &Node, seq: &mut Vec<String>) {
+    if is_stmt_scored_node(node) {
+        seq.push(node.kind.clone());
+    }
+    for child in &node.children {
+        if let Child::Node(n) = child {
+            collect_stmt_sequence(n, seq);
+        }
+    }
+}
+
+fn is_stmt_scored_node(node: &Node) -> bool {
+    !node.children.is_empty() && node.kind.starts_with("Stmt")
 }
 
 fn is_ast_scored_node(node: &Node) -> bool {
