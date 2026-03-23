@@ -8,6 +8,7 @@ pub struct Worklist {
     map: BTreeMap<i64, VecDeque<Node>>,
     total: usize,
     max_size: usize,
+    evictions: usize,
 }
 
 impl Worklist {
@@ -20,6 +21,7 @@ impl Worklist {
             map: BTreeMap::new(),
             total: 0,
             max_size,
+            evictions: 0,
         }
     }
 
@@ -39,6 +41,7 @@ impl Worklist {
                     self.map.remove(&worst_score);
                 }
                 self.total -= 1;
+                self.evictions += 1;
             }
         }
         self.map.entry(score).or_default().push_back(node);
@@ -62,5 +65,9 @@ impl Worklist {
 
     pub fn len(&self) -> usize {
         self.total
+    }
+
+    pub fn evictions(&self) -> usize {
+        self.evictions
     }
 }
