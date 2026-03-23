@@ -99,6 +99,7 @@ fn project_root() -> PathBuf {
 struct RunResult {
     elapsed: f64,
     found: bool,
+    cap_hit: bool,
 }
 
 fn run_once(binary: &PathBuf, target: &str, cli: &Cli, json_file: Option<&PathBuf>) -> RunResult {
@@ -123,6 +124,7 @@ fn run_once(binary: &PathBuf, target: &str, cli: &Cli, json_file: Option<&PathBu
     RunResult {
         elapsed,
         found: stdout.contains("FOUND"),
+        cap_hit: stdout.contains("worklist cap hit"),
     }
 }
 
@@ -170,10 +172,10 @@ fn main() {
     );
     println!();
     println!(
-        "{:<16} {:<12} {:>8} {:>8} {:>8}",
-        "target", "status", "mean", "min", "max"
+        "{:<16} {:<12} {:>8} {:>8} {:>8}\t  {}",
+        "target", "status", "mean", "min", "max", "warnings"
     );
-    println!("{}", "-".repeat(56));
+    println!("{}", "-".repeat(72));
 
     let mut solved = 0usize;
     let mut solved_times: Vec<f64> = Vec::new();
@@ -196,18 +198,21 @@ fn main() {
 
         let mut times: Vec<f64> = Vec::new();
         let mut found = false;
+        let mut cap_hit = false;
         for _ in 0..cli.runs {
             let r = run_once(&binary, target, &cli, json_file.as_ref());
             times.push(r.elapsed);
             found = r.found;
+            cap_hit |= r.cap_hit;
         }
         let mean = times.iter().sum::<f64>() / times.len() as f64;
         let min = times.iter().cloned().fold(f64::INFINITY, f64::min);
         let max = times.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
         let status = if found { "FOUND" } else { "TIMEOUT" };
+        let warnings = if cap_hit { "⚠ worklist cap hit" } else { "" };
         println!(
-            "{:<16} {:<12} {:>7.2}s {:>7.2}s {:>7.2}s",
-            target, status, mean, min, max
+            "{:<16} {:<12} {:>7.2}s {:>7.2}s {:>7.2}s\t  {}",
+            target, status, mean, min, max, warnings
         );
         if found {
             solved += 1;

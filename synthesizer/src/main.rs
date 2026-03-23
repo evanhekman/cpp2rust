@@ -94,7 +94,7 @@ fn synthesize(
     let candidates_possible = count_programs(&grammar, &kind, max_depth);
 
     let root = Node::new(&kind, vec![Child::Hole("Block".into())], 0);
-    let mut worklist = Worklist::with_capacity(50_000);
+    let mut worklist = Worklist::with_capacity(500_000);
     worklist.push(root, 0);
 
     let deadline = Instant::now() + Duration::from_secs(timeout);
@@ -103,12 +103,17 @@ fn synthesize(
 
     while !worklist.is_empty() && !interrupted.load(Ordering::Relaxed) {
         if Instant::now() > deadline {
-            println!(
+            let evictions = worklist.evictions();
+            print!(
                 "  TIMEOUT after {} expansions, {}/{} candidates tested",
                 nodes_expanded,
                 candidates_tried,
                 fmt_count(candidates_possible)
             );
+            if evictions > 0 {
+                print!("\n  WARNING: worklist cap hit — {} candidates evicted, valid solutions may have been missed", evictions);
+            }
+            println!();
             return None;
         }
 
@@ -171,12 +176,17 @@ fn synthesize(
         return None;
     }
 
-    println!(
+    let evictions = worklist.evictions();
+    print!(
         "  Search exhausted after {} expansions, {}/{} candidates tested",
         nodes_expanded,
         candidates_tried,
         fmt_count(candidates_possible)
     );
+    if evictions > 0 {
+        print!("\n  WARNING: worklist cap hit — {} candidates evicted, valid solutions may have been missed", evictions);
+    }
+    println!();
     None
 }
 
