@@ -58,16 +58,6 @@ impl Node {
         }
     }
 
-    pub fn child_at_path(&self, path: &[usize]) -> &Child {
-        let mut node = self;
-        for &idx in &path[..path.len() - 1] {
-            match &node.children[idx] {
-                Child::Node(n) => node = n,
-                Child::Hole(_) => panic!("hit hole before end"),
-            }
-        }
-        &node.children[*path.last().unwrap()]
-    }
 
     pub fn node_at_path(&self, path: &[usize]) -> &Node {
         if path.is_empty() {

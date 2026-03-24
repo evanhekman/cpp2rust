@@ -219,19 +219,6 @@ fn ast_feature_matches(rust_kind: &str, hint: &str) -> bool {
     }
 }
 
-/// Collect scored nodes in DFS pre-order for the AST heuristic.
-/// Unlike the scalar heuristic, this includes StmtReturn (since the AST
-/// may emit "StmtReturn" for both return and throw).
-fn collect_ast_sequence(node: &Node, seq: &mut Vec<String>) {
-    if is_ast_scored_node(node) {
-        seq.push(node.kind.clone());
-    }
-    for child in &node.children {
-        if let Child::Node(n) = child {
-            collect_ast_sequence(n, seq);
-        }
-    }
-}
 
 /// Collect only Stmt-level nodes in DFS pre-order.
 /// Used by h_ast_ordering so that Expr nodes in wrong structural positions
@@ -260,28 +247,25 @@ fn is_ast_scored_node(node: &Node) -> bool {
         && (node.kind.starts_with("Expr") || node.kind.starts_with("Stmt"))
 }
 
-/// (-1) for each C++ operator whose count in the Rust candidate exactly matches
-/// its count in the C++ source. Encourages programs with the right operator
-/// distribution without penalising programs that differ.
-pub fn h_count_match(node: &Node, features: &CppFeatures) -> i64 {
-    let rust_counts = collect_operator_counts(node);
-    features
-        .operator_counts
-        .iter()
-        .map(|(feature, &cpp_count)| {
-            let rust_count: usize = rust_counts
-                .iter()
-                .filter(|(k, _)| feature_matches(k, feature))
-                .map(|(_, &v)| v)
-                .sum();
-            if rust_count == cpp_count {
-                -1
-            } else {
-                0
-            }
-        })
-        .sum()
-}
+// h_count_match: NOT WIRED IN — reward-based heuristics can delay programs BFS would find
+// quickly by boosting wrong candidates that happen to match counts by coincidence.
+// The penalty side of this idea is already covered by h_absent_penalty + h_overcount_penalty.
+//
+// pub fn h_count_match(node: &Node, features: &CppFeatures) -> i64 {
+//     let rust_counts = collect_operator_counts(node);
+//     features
+//         .operator_counts
+//         .iter()
+//         .map(|(feature, &cpp_count)| {
+//             let rust_count: usize = rust_counts
+//                 .iter()
+//                 .filter(|(k, _)| feature_matches(k, feature))
+//                 .map(|(_, &v)| v)
+//                 .sum();
+//             if rust_count == cpp_count { -1 } else { 0 }
+//         })
+//         .sum()
+// }
 
 /// (-1) for each operator in the longest common prefix between the C++ operator
 /// sequence (left-to-right scan) and the Rust AST operator sequence (DFS

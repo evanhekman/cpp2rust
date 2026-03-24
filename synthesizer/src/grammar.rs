@@ -4,6 +4,7 @@ use std::collections::HashMap;
 #[derive(Clone, Debug)]
 pub struct Production {
     pub name: String,
+    #[allow(dead_code)]
     pub nonterminal: String,
     pub children_spec: Vec<String>,
     pub rust_template: String,

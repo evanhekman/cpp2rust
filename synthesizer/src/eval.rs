@@ -53,12 +53,14 @@ impl Value {
             _ => Err(EvalError::TypeError),
         }
     }
+    #[allow(dead_code)]
     pub fn as_slice_i32(&self) -> Result<&[i32], EvalError> {
         match self {
             Value::SliceI32(v) | Value::SliceMutI32(v) => Ok(v.as_slice()),
             _ => Err(EvalError::TypeError),
         }
     }
+    #[allow(dead_code)]
     pub fn as_slice_u8(&self) -> Result<&[u8], EvalError> {
         match self {
             Value::SliceU8(v) => Ok(v.as_slice()),
