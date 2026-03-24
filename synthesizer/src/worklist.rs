@@ -12,9 +12,6 @@ pub struct Worklist {
 }
 
 impl Worklist {
-    pub fn new() -> Self {
-        Self::with_capacity(usize::MAX)
-    }
 
     pub fn with_capacity(max_size: usize) -> Self {
         Self {
@@ -63,9 +60,6 @@ impl Worklist {
         self.total == 0
     }
 
-    pub fn len(&self) -> usize {
-        self.total
-    }
 
     pub fn evictions(&self) -> usize {
         self.evictions

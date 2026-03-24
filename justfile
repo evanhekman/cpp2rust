@@ -3,44 +3,26 @@ python := root / ".venv/bin/python"
 autoverus := root / "verus-proof-synthesis/autoverus"
 synth  := root / "target/release/synth"
 bench  := root / "target/release/bench"
-processed := root / "data/benchmark0/processed"
-synth_bench := root / "data/synth_benchmark/processed"
+data   := root / "data"
 symbols := root / "synthesizer/symbols.txt"
 
-# build all synthesizer binaries
+# build synthesizer binaries (incremental — fast if nothing changed)
 build:
     cargo build --release
 
-# synthesize benchmark0 target(s)
-# usage: just synthesize              → all four targets
-#        just synthesize dot_product  → one target
-synthesize target="benchmark0":
+# synthesize targets in a benchmark dataset
+# just synthesize synth_benchmark              → all targets
+# just synthesize synth_benchmark sum_array    → one target
+# just synthesize benchmark0                   → all targets
+# just synthesize benchmark0 dot_product       → one target
+synthesize BENCH TARGET="": build
     #!/usr/bin/env bash
     set -euo pipefail
-    if [ "{{target}}" = "benchmark0" ]; then
-        {{bench}} \
-            --dataset {{processed}} \
-            --symbols {{symbols}}
+    dataset={{data}}/{{BENCH}}/processed
+    if [ -z "{{TARGET}}" ]; then
+        {{bench}} --dataset "$dataset" --symbols {{symbols}}
     else
-        {{synth}} \
-            --file {{processed}}/{{target}}.json \
-            --symbols {{symbols}}
-    fi
-
-# run controlled synthesis benchmark (depth 4-8)
-# usage: just synth-bench            → all five targets
-#        just synth-bench sum_array  → one target
-synth-bench target="all":
-    #!/usr/bin/env bash
-    set -euo pipefail
-    if [ "{{target}}" = "all" ]; then
-        {{bench}} \
-            --dataset {{synth_bench}} \
-            --symbols {{symbols}}
-    else
-        {{synth}} \
-            --file {{synth_bench}}/{{target}}.json \
-            --symbols {{symbols}}
+        {{synth}} --file "$dataset/{{TARGET}}.json" --symbols {{symbols}}
     fi
 
 # run verus on a file

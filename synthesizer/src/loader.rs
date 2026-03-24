@@ -22,6 +22,35 @@ pub struct CppFeatures {
     pub operator_sequence: Vec<String>,
 }
 
+/// Deserialized from `data/<benchmark>/processed/<name>.json`.
+///
+/// Required fields: name, params, return_type, ast.
+/// Optional: example_rust, cpp_features, test_cases (generated from C++ oracle if absent).
+///
+/// # AST format
+/// Top-level array of statement objects. Each statement is one of:
+/// ```json
+/// {"op":"let",    "args":[{"var":"x"}, <expr>]}
+/// {"op":"return", "args":[<expr>]}
+/// {"op":"throw",  "args":[<expr>]}                      // becomes early return in Rust
+/// {"op":"=",      "args":[{"var":"x"}, <expr>]}
+/// {"op":"+=",     "args":[{"var":"x"}, <expr>]}
+/// {"op":"-=",     "args":[{"var":"x"}, <expr>]}
+/// {"op":"++",     "args":[{"var":"x"}]}
+/// {"op":"--",     "args":[{"var":"x"}]}
+/// {"condition":..., "then":[...], "else":[...]}          // if; else is optional
+/// {"init":..., "condition":..., "update":..., "body":[...]}  // for loop
+/// {"condition":..., "body":[...]}                        // while loop
+/// {"body":[...], "catch":...}                            // try/catch; body visited, catch ignored
+/// ```
+/// Expressions are one of:
+/// ```json
+/// {"var": "x"}                          // variable reference
+/// {"lit": "0"}                          // literal
+/// {"op": "+", "args":[<expr>, <expr>]}  // binary/unary op
+/// {"op": "[]", "args":[<expr>, <expr>]} // array index
+/// {"op": "*",  "args":[<expr>]}         // pointer dereference
+/// ```
 #[derive(Deserialize, Clone, Debug)]
 pub struct Target {
     pub name: String,
