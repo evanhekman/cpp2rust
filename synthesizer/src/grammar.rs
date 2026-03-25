@@ -335,6 +335,16 @@ pub fn find_production<'a>(kind: &str, grammar: &'a Grammar) -> Option<&'a Produ
     grammar.values().flatten().find(|p| p.name == kind)
 }
 
+/// Maps production name → nonterminal. Used by the neighborhood search to
+/// determine what hole-type to insert when punching a subtree out of a program.
+pub type ReverseMap = std::collections::HashMap<String, String>;
+
+pub fn build_reverse_map(grammar: &Grammar) -> ReverseMap {
+    grammar.values().flatten()
+        .map(|p| (p.name.clone(), p.nonterminal.clone()))
+        .collect()
+}
+
 // ── Function definition registration ─────────────────────────────────────────
 
 pub fn register_fn_def_known(target: &crate::loader::Target, grammar: &mut Grammar) -> String {
