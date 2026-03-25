@@ -1,0 +1,42 @@
+{
+  "ast": [
+    {
+      "args": [
+        {
+          "ptr_null_compared_or_assigned": true,
+          "var": "p"
+        },
+        {
+          "lit": "nullptr"
+        }
+      ],
+      "op": "let"
+    },
+    {
+      "condition": {
+        "lit": "(p == nullptr)"
+      },
+      "then": [
+        {
+          "args": [
+            {
+              "lit": "1"
+            }
+          ],
+          "op": "return"
+        }
+      ]
+    },
+    {
+      "args": [
+        {
+          "lit": "0"
+        }
+      ],
+      "op": "return"
+    }
+  ],
+  "name": "pointer_init_tag_demo",
+  "params": [],
+  "return_type": "int"
+}
