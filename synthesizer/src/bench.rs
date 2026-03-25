@@ -29,6 +29,14 @@ struct Cli {
     /// ordering, absent, required, structural, block-sizes
     #[arg(long, value_name = "NAME")]
     disable_heuristic: Vec<String>,
+    #[arg(long, default_value_t = 1_000_000)]
+    worklist_cap: usize,
+}
+
+fn fmt_candidates(n: u64) -> String {
+    if n < 1_000 { return n.to_string(); }
+    if n < 1_000_000 { return format!("{:.1}k", n as f64 / 1_000.0); }
+    format!("{:.1}M", n as f64 / 1_000_000.0)
 }
 
 fn synth_binary() -> PathBuf {
@@ -104,6 +112,7 @@ struct RunResult {
     elapsed: f64,
     found: bool,
     cap_hit: bool,
+    candidates: Option<u64>,
 }
 
 fn run_once(binary: &PathBuf, target: &str, cli: &Cli, json_file: Option<&PathBuf>) -> RunResult {
@@ -119,8 +128,9 @@ fn run_once(binary: &PathBuf, target: &str, cli: &Cli, json_file: Option<&PathBu
         ]);
     }
     cmd.args([
-        "--max-depth", &cli.max_depth.to_string(),
-        "--timeout",   &cli.timeout.to_string(),
+        "--max-depth",    &cli.max_depth.to_string(),
+        "--timeout",      &cli.timeout.to_string(),
+        "--worklist-cap", &cli.worklist_cap.to_string(),
     ]);
     for name in &cli.disable_heuristic {
         cmd.args(["--disable-heuristic", name]);
@@ -128,10 +138,29 @@ fn run_once(binary: &PathBuf, target: &str, cli: &Cli, json_file: Option<&PathBu
     let output = cmd.output().expect("failed to run synth binary");
     let elapsed = t0.elapsed().as_secs_f64();
     let stdout = String::from_utf8_lossy(&output.stdout);
+    // Parse candidate count from "FOUND in Xs  (N candidates, ...)" or
+    // "TIMEOUT after N expansions, M/Z candidates tested"
+    let candidates = stdout.lines().find_map(|line| {
+        if line.contains("candidates") {
+            line.split('(').nth(1)
+                .and_then(|s| s.split_whitespace().next())
+                .and_then(|s| s.parse::<u64>().ok())
+                .or_else(|| {
+                    // timeout format: "N expansions, M/Z candidates tested"
+                    line.split(',').nth(1)
+                        .and_then(|s| s.trim().split_whitespace().next())
+                        .and_then(|s| s.split('/').next())
+                        .and_then(|s| s.parse::<u64>().ok())
+                })
+        } else {
+            None
+        }
+    });
     RunResult {
         elapsed,
         found: stdout.contains("FOUND"),
         cap_hit: stdout.contains("worklist cap hit"),
+        candidates,
     }
 }
 
@@ -177,18 +206,19 @@ fn main() {
     };
     println!("Benchmarking {} targets, {} run(s) each  [{}]", targets.len(), cli.runs, mode);
     println!(
-        "max-depth={}  timeout={}s  disabled={}  binary={}",
+        "max-depth={}  timeout={}s  cap={}  disabled={}  binary={}",
         cli.max_depth,
         cli.timeout,
+        cli.worklist_cap,
         disabled_str,
         binary.display()
     );
     println!();
     println!(
-        "{:<16} {:<12} {:>8} {:>8} {:>8}\t  {}",
-        "target", "status", "mean", "min", "max", "warnings"
+        "{:<20} {:<12} {:>8} {:>8} {:>8} {:>10}  {}",
+        "target", "status", "mean", "min", "max", "cands", "warnings"
     );
-    println!("{}", "-".repeat(72));
+    println!("{}", "-".repeat(80));
 
     let mut solved = 0usize;
     let mut solved_times: Vec<f64> = Vec::new();
@@ -212,20 +242,23 @@ fn main() {
         let mut times: Vec<f64> = Vec::new();
         let mut found = false;
         let mut cap_hit = false;
+        let mut last_candidates: Option<u64> = None;
         for _ in 0..cli.runs {
             let r = run_once(&binary, target, &cli, json_file.as_ref());
             times.push(r.elapsed);
             found = r.found;
             cap_hit |= r.cap_hit;
+            last_candidates = r.candidates;
         }
         let mean = times.iter().sum::<f64>() / times.len() as f64;
         let min = times.iter().cloned().fold(f64::INFINITY, f64::min);
         let max = times.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
         let status = if found { "FOUND" } else { "TIMEOUT" };
+        let cands_str = last_candidates.map(|c| fmt_candidates(c)).unwrap_or_else(|| "-".into());
         let warnings = if cap_hit { "⚠ worklist cap hit" } else { "" };
         println!(
-            "{:<16} {:<12} {:>7.2}s {:>7.2}s {:>7.2}s\t  {}",
-            target, status, mean, min, max, warnings
+            "{:<20} {:<12} {:>7.2}s {:>7.2}s {:>7.2}s {:>10}  {}",
+            target, status, mean, min, max, cands_str, warnings
         );
         if found {
             solved += 1;

@@ -43,6 +43,8 @@ struct Cli {
     /// ordering, absent, required, structural, block-sizes
     #[arg(long, value_name = "NAME")]
     disable_heuristic: Vec<String>,
+    #[arg(long, default_value_t = 1_000_000)]
+    worklist_cap: usize,
 }
 
 fn fmt_count(n: u128) -> String {
@@ -91,15 +93,16 @@ fn synthesize(
     literals: &[String],
     max_depth: usize,
     timeout: u64,
+    worklist_cap: usize,
     interrupted: &Arc<AtomicBool>,
     hcfg: &HeuristicConfig,
-) -> Option<String> {
+) -> Option<(String, u64, u64)> {
     let mut grammar = build_grammar(literals, &target.params, &target.local_vars, &target.return_type);
     let kind = register_fn_def_known(target, &mut grammar);
     let candidates_possible = count_programs(&grammar, &kind, max_depth);
 
     let root = Node::new(&kind, vec![Child::Hole("Block".into())], 0);
-    let mut worklist = Worklist::with_capacity(500_000);
+    let mut worklist = Worklist::with_capacity(worklist_cap);
     worklist.push(root, 0);
 
     let deadline = Instant::now() + Duration::from_secs(timeout);
@@ -129,7 +132,7 @@ fn synthesize(
             let cand_score = score(&partial, target.cpp_features.as_ref(), target.ast_hints.as_deref(), Some(&target.block_sizes), Some(&target.required_idents), hcfg);
             let _ = cand_score;
             if test_candidate(&partial, target, &grammar) {
-                return render(&partial, &grammar).ok();
+                return render(&partial, &grammar).ok().map(|src| (src, candidates_tried, nodes_expanded));
             }
             continue;
         }
@@ -323,11 +326,14 @@ fn main() {
     );
 
     let t0 = Instant::now();
-    let result = synthesize(&target, &literals, cli.max_depth, cli.timeout, &interrupted, &hcfg);
+    let result = synthesize(&target, &literals, cli.max_depth, cli.timeout, cli.worklist_cap, &interrupted, &hcfg);
     let elapsed = t0.elapsed().as_secs_f64();
 
-    if let Some(src) = result {
-        println!("  FOUND in {:.1}s:\n  {}", elapsed, src);
+    if let Some((src, candidates, expansions)) = result {
+        println!(
+            "  FOUND in {:.1}s  ({} candidates, {} expansions):\n  {}",
+            elapsed, candidates, expansions, src
+        );
     } else if !interrupted.load(Ordering::Relaxed) {
         println!("  FAILED in {:.1}s", elapsed);
     }

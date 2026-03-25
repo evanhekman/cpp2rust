@@ -10,11 +10,12 @@ pub struct HeuristicConfig {
     pub structural:  bool,
     pub block_sizes: bool,
     pub vars:        bool,
+    pub complete:    bool,
 }
 
 impl Default for HeuristicConfig {
     fn default() -> Self {
-        Self { ordering: true, absent: true, required: true, structural: true, block_sizes: true, vars: true }
+        Self { ordering: true, absent: true, required: true, structural: true, block_sizes: true, vars: true, complete: true }
     }
 }
 
@@ -29,7 +30,8 @@ impl HeuristicConfig {
                 "structural"  => cfg.structural  = false,
                 "block-sizes" => cfg.block_sizes = false,
                 "vars"        => cfg.vars        = false,
-                other => eprintln!("warning: unknown heuristic '{}' (valid: ordering, absent, required, structural, block-sizes, vars)", other),
+                "complete"    => cfg.complete    = false,
+                other => eprintln!("warning: unknown heuristic '{}' (valid: ordering, absent, required, structural, block-sizes, vars, complete)", other),
             }
         }
         cfg
@@ -55,13 +57,23 @@ pub fn score(node: &Node, features: Option<&CppFeatures>, ast_hints: Option<&[St
                 cost += h_required_vars(node, idents);
             }
         }
+        if cfg.complete { cost += h_complete_bonus(node); }
     } else if let Some(f) = features {
         // Fallback: text-scanned operator heuristics (dataset0 compat)
-        if cfg.ordering { cost += h_ordering_match(node, f); }
-        if cfg.absent   { cost += h_absent_penalty(node, f); }
-        if cfg.absent   { cost += h_overcount_penalty(node, f); }
+        if cfg.ordering  { cost += h_ordering_match(node, f); }
+        if cfg.absent    { cost += h_absent_penalty(node, f); }
+        if cfg.absent    { cost += h_overcount_penalty(node, f); }
+        if cfg.complete  { cost += h_complete_bonus(node); }
     }
     cost
+}
+
+/// (-1) bonus for complete programs (no holes). Breaks score ties in favour of
+/// evaluating a finished candidate over expanding another partial program.
+/// Evaluation is cheap; this ensures we never defer a testable program behind
+/// a partial with the same content-based score.
+pub fn h_complete_bonus(node: &Node) -> i64 {
+    if node.is_complete() { -1 } else { 0 }
 }
 
 // ── AST-based heuristics ──────────────────────────────────────────────────────
