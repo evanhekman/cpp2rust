@@ -1,0 +1,104 @@
+{
+  "ast": [
+    {
+      "args": [
+        {
+          "var": "sum"
+        },
+        {
+          "lit": "0"
+        }
+      ],
+      "op": "let"
+    },
+    {
+      "body": [
+        {
+          "args": [
+            {
+              "var": "sum"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "[]"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "b"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "[]"
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "+="
+        }
+      ],
+      "condition": {
+        "args": [
+          {
+            "var": "i"
+          },
+          {
+            "var": "n"
+          }
+        ],
+        "op": "<"
+      },
+      "init": {
+        "args": [
+          {
+            "var": "i"
+          },
+          {
+            "lit": "0"
+          }
+        ],
+        "op": "let"
+      },
+      "update": {
+        "args": [
+          {
+            "var": "i"
+          }
+        ],
+        "op": "++"
+      }
+    },
+    {
+      "args": [
+        {
+          "var": "sum"
+        }
+      ],
+      "op": "return"
+    }
+  ],
+  "name": "dot",
+  "params": [
+    {
+      "name": "a",
+      "type": "&[u8]"
+    },
+    {
+      "name": "b",
+      "type": "&[u8]"
+    }
+  ],
+  "return_type": "i32"
+}
