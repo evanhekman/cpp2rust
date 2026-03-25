@@ -93,10 +93,14 @@
   "params": [
     {
       "name": "a",
+      "ptr_nullifiable": false,
+      "ptr_used_in_arithmetic": true,
       "type": "&[u8]"
     },
     {
       "name": "b",
+      "ptr_nullifiable": false,
+      "ptr_used_in_arithmetic": true,
       "type": "&[u8]"
     }
   ],

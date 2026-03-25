@@ -1,0 +1,48 @@
+{
+  "ast": [
+    {
+      "args": [
+        {
+          "ptr_associated_with_new_delete": true,
+          "ptr_null_compared_or_assigned": false,
+          "ptr_used_in_arithmetic": false,
+          "var": "p"
+        },
+        {
+          "lit": "new int(5)"
+        }
+      ],
+      "op": "let"
+    },
+    {
+      "args": [
+        {
+          "var": "x"
+        },
+        {
+          "args": [
+            {
+              "var": "p"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "let"
+    },
+    {
+      "lit": "delete p"
+    },
+    {
+      "args": [
+        {
+          "var": "x"
+        }
+      ],
+      "op": "return"
+    }
+  ],
+  "name": "new_delete_ptr",
+  "params": [],
+  "return_type": "i32"
+}

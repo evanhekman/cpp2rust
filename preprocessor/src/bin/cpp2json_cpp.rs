@@ -62,7 +62,7 @@ fn function_to_json(func: Node<'_>, whole_src: &str, src: &[u8]) -> Result<Value
         .child_by_field_name("declarator")
         .ok_or_else(|| anyhow::anyhow!("function missing declarator"))?;
     let name = function_name(declarator, src).unwrap_or_else(|| "unknown".to_string());
-    let params = function_params(declarator, src);
+    let params = function_params(declarator, whole_src, src);
 
     let body = func
         .child_by_field_name("body")
@@ -82,7 +82,7 @@ fn function_name(fd: Node<'_>, src: &[u8]) -> Option<String> {
     Some(base_name(decl, src))
 }
 
-fn function_params(fd: Node<'_>, src: &[u8]) -> Vec<Value> {
+fn function_params(fd: Node<'_>, whole_src: &str, src: &[u8]) -> Vec<Value> {
     let mut out = Vec::new();
     let Some(pl) = fd.child_by_field_name("parameters") else {
         return out;
@@ -101,7 +101,18 @@ fn function_params(fd: Node<'_>, src: &[u8]) -> Vec<Value> {
         };
         let name = base_name(decl, src);
         let full_ty = merge_type_and_declarator(&ty, decl, src);
-        out.push(json!({ "name": name, "type": full_ty }));
+        let is_ptr = full_ty.contains('*');
+        if is_ptr {
+            out.push(json!({
+                "name": name,
+                "type": full_ty,
+                "ptr_nullifiable": has_nullptr_usage(whole_src, &name),
+                "ptr_used_in_arithmetic": has_pointer_arithmetic_usage(whole_src, &name),
+                "ptr_associated_with_new_delete": has_new_delete_usage(whole_src, &name)
+            }));
+        } else {
+            out.push(json!({ "name": name, "type": full_ty }));
+        }
     }
     out
 }
@@ -228,7 +239,9 @@ fn decl_stmt(n: Node<'_>, whole_src: &str, src: &[u8]) -> Option<Value> {
     let lhs = if is_ptr {
         json!({
             "var": var_name,
-            "ptr_null_compared_or_assigned": ptr_null_compared_or_assigned
+            "ptr_null_compared_or_assigned": ptr_null_compared_or_assigned,
+            "ptr_used_in_arithmetic": has_pointer_arithmetic_usage(whole_src, &var_name),
+            "ptr_associated_with_new_delete": has_new_delete_usage(whole_src, &var_name)
         })
     } else {
         json!({ "var": var_name })
@@ -238,6 +251,10 @@ fn decl_stmt(n: Node<'_>, whole_src: &str, src: &[u8]) -> Option<Value> {
 
 fn expr(n: Node<'_>, src: &[u8]) -> Value {
     match n.kind() {
+        "condition_clause" => n
+            .child_by_field_name("value")
+            .map(|v| expr(v, src))
+            .unwrap_or_else(|| json!({ "lit": text(n, src) })),
         "identifier" | "field_identifier" => json!({ "var": text(n, src) }),
         "number_literal" | "char_literal" | "string_literal" | "true" | "false" | "nullptr" => {
             json!({ "lit": text(n, src) })
@@ -341,6 +358,41 @@ fn has_nullptr_usage(source: &str, var_name: &str) -> bool {
         format!(r"{vp}\s*=\s*\(?\s*{np}\s*\)?"),
         // guard conditions
         format!(r"(?:if|while)\s*\(\s*!?\s*{vp}\s*\)"),
+    ];
+    patterns
+        .iter()
+        .filter_map(|p| Regex::new(p).ok())
+        .any(|re| re.is_match(source))
+}
+
+fn has_pointer_arithmetic_usage(source: &str, var_name: &str) -> bool {
+    let v = regex::escape(var_name);
+    let vp = format!(r"\b{v}\b");
+    let patterns = [
+        // ++p / p++ / --p / p--
+        format!(r"(?:\+\+|--)\s*{vp}"),
+        format!(r"{vp}\s*(?:\+\+|--)"),
+        // p += k / p -= k
+        format!(r"{vp}\s*(?:\+=|-=)\s*[^;,\)\]]+"),
+        // p + k / p - k
+        format!(r"{vp}\s*[+-]\s*[^;,\)\]]+"),
+        // indexing p[i]
+        format!(r"{vp}\s*\["),
+    ];
+    patterns
+        .iter()
+        .filter_map(|p| Regex::new(p).ok())
+        .any(|re| re.is_match(source))
+}
+
+fn has_new_delete_usage(source: &str, var_name: &str) -> bool {
+    let v = regex::escape(var_name);
+    let vp = format!(r"\b{v}\b");
+    let patterns = [
+        // p = new T(...) / p = new T[...] / p = (new T)
+        format!(r"{vp}\s*=\s*\(?\s*new\b"),
+        // delete p; / delete[] p;
+        format!(r"delete\s*(?:\[\s*\])?\s*{vp}\b"),
     ];
     patterns
         .iter()

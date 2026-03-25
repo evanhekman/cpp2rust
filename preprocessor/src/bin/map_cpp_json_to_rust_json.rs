@@ -50,11 +50,33 @@ fn map_types_in_place(doc: &mut Value) {
         for p in params {
             let name = p.get("name").and_then(Value::as_str).unwrap_or("").to_string();
             let ty = p.get("type").and_then(Value::as_str).unwrap_or("").to_string();
+            let ptr_nullifiable = p
+                .get("ptr_nullifiable")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
+            let ptr_used_in_arithmetic = p
+                .get("ptr_used_in_arithmetic")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
+            let ptr_associated_with_new_delete = p
+                .get("ptr_associated_with_new_delete")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
             if ty.is_empty() {
                 continue;
             }
             let mapped = map_cpp_type_to_rust(&ty);
-            *p = json!({ "name": name, "type": mapped });
+            if ty.contains('*') {
+                *p = json!({
+                    "name": name,
+                    "type": mapped,
+                    "ptr_nullifiable": ptr_nullifiable,
+                    "ptr_used_in_arithmetic": ptr_used_in_arithmetic,
+                    "ptr_associated_with_new_delete": ptr_associated_with_new_delete
+                });
+            } else {
+                *p = json!({ "name": name, "type": mapped });
+            }
         }
     }
 
