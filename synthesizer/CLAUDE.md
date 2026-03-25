@@ -55,13 +55,18 @@ cpp2rust
     - processed/
     - stitched/
     - validated/
-  - synth_benchmark/
-    - cpp/
-    - processed/
+  - synthesizer/
+    - b0/
+      - cpp/
+      - processed/
+    - b1/
+      - cpp/
+      - processed/
 - README.md
 - justfile
 - .gitignore
 
 ### goals
-the synthesizer should be able to quickly synthesize solutions for data/benchmark0/. "quickly" is not strictly defined, but 5 minutes for each test case would be a suitable upper limit. the intermediate goal is to quickly synthesize everything in data/synth_benchmark/ - these should be synthesized in 30s or less.
-- [ ] synth_benchmark
+the synthesizer should be able to quickly synthesize solutions for data/benchmark0/. "quickly" is not strictly defined, but 5 minutes for each test case would be a suitable upper limit. the intermediate goal is to solve data/synthesizer/b0/ within 30s each, then data/synthesizer/b1/ with improved heuristics.
+- [ ] synthesizer/b0
+- [ ] synthesizer/b1

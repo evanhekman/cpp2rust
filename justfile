@@ -11,18 +11,23 @@ build:
     cargo build --release
 
 # synthesize targets in a benchmark dataset
-# just synthesize synth_benchmark              → all targets
-# just synthesize synth_benchmark sum_array    → one target
-# just synthesize benchmark0                   → all targets
-# just synthesize benchmark0 dot_product       → one target
-synthesize BENCH TARGET="": build
+# just synthesize synthesizer/b0                                       → all b0 targets
+# just synthesize synthesizer/b0 sum_array                             → one b0 target
+# just synthesize synthesizer/b1                                       → all b1 targets
+# just synthesize benchmark0                                           → all benchmark0 targets
+# just synthesize synthesizer/b0 "" "absent structural"               → disable heuristics
+synthesize BENCH TARGET="" DISABLE="": build
     #!/usr/bin/env bash
     set -euo pipefail
     dataset={{data}}/{{BENCH}}/processed
+    disable_flags=""
+    for h in {{DISABLE}}; do
+        disable_flags="$disable_flags --disable-heuristic $h"
+    done
     if [ -z "{{TARGET}}" ]; then
-        {{bench}} --dataset "$dataset" --symbols {{symbols}}
+        {{bench}} --dataset "$dataset" --symbols {{symbols}} $disable_flags
     else
-        {{synth}} --file "$dataset/{{TARGET}}.json" --symbols {{symbols}}
+        {{synth}} --file "$dataset/{{TARGET}}.json" --symbols {{symbols}} $disable_flags
     fi
 
 # run verus on a file

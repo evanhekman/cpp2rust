@@ -1,23 +1,58 @@
 use crate::ast::{Child, Node};
 use crate::loader::CppFeatures;
 
-pub fn score(node: &Node, features: Option<&CppFeatures>, ast_hints: Option<&[String]>, block_sizes: Option<&[usize]>) -> i64 {
+/// Which heuristics are active. All enabled by default.
+#[derive(Clone, Debug)]
+pub struct HeuristicConfig {
+    pub ordering:    bool,
+    pub absent:      bool,
+    pub required:    bool,
+    pub structural:  bool,
+    pub block_sizes: bool,
+}
+
+impl Default for HeuristicConfig {
+    fn default() -> Self {
+        Self { ordering: true, absent: true, required: true, structural: true, block_sizes: true }
+    }
+}
+
+impl HeuristicConfig {
+    pub fn from_disabled(disabled: &[String]) -> Self {
+        let mut cfg = Self::default();
+        for name in disabled {
+            match name.as_str() {
+                "ordering"    => cfg.ordering    = false,
+                "absent"      => cfg.absent      = false,
+                "required"    => cfg.required    = false,
+                "structural"  => cfg.structural  = false,
+                "block-sizes" => cfg.block_sizes = false,
+                other => eprintln!("warning: unknown heuristic '{}' (valid: ordering, absent, required, structural, block-sizes)", other),
+            }
+        }
+        cfg
+    }
+}
+
+pub fn score(node: &Node, features: Option<&CppFeatures>, ast_hints: Option<&[String]>, block_sizes: Option<&[usize]>, cfg: &HeuristicConfig) -> i64 {
     let mut cost = 0i64;
     if let Some(hints) = ast_hints {
         // AST-derived heuristic: prioritise the verbatim translation,
         // explore deviations proportional to their structural distance.
-        cost += h_ast_ordering(node, hints);
-        cost += h_ast_absent_penalty(node, hints);
-        cost += h_required_hint_penalty(node, hints);
-        cost += h_structural_checks(node, hints);
-        if let Some(sizes) = block_sizes {
-            cost += h_block_sizes(node, sizes);
+        if cfg.ordering   { cost += h_ast_ordering(node, hints); }
+        if cfg.absent     { cost += h_ast_absent_penalty(node, hints); }
+        if cfg.required   { cost += h_required_hint_penalty(node, hints); }
+        if cfg.structural { cost += h_structural_checks(node, hints); }
+        if cfg.block_sizes {
+            if let Some(sizes) = block_sizes {
+                cost += h_block_sizes(node, sizes);
+            }
         }
     } else if let Some(f) = features {
         // Fallback: text-scanned operator heuristics (dataset0 compat)
-        cost += h_ordering_match(node, f);
-        cost += h_absent_penalty(node, f);
-        cost += h_overcount_penalty(node, f);
+        if cfg.ordering { cost += h_ordering_match(node, f); }
+        if cfg.absent   { cost += h_absent_penalty(node, f); }
+        if cfg.absent   { cost += h_overcount_penalty(node, f); }
     }
     cost
 }

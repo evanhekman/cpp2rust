@@ -1,0 +1,48 @@
+{
+  "name": "count_negative",
+  "params": [
+    { "name": "a", "type": "&[i32]" }
+  ],
+  "return_type": "i32",
+  "ast": [
+    {
+      "op": "let",
+      "args": [ { "var": "c" }, { "lit": "0" } ]
+    },
+    {
+      "init": {
+        "op": "let",
+        "args": [ { "var": "i" }, { "lit": "0" } ]
+      },
+      "condition": {
+        "op": "<",
+        "args": [ { "var": "i" }, { "var": "n" } ]
+      },
+      "update": {
+        "op": "++",
+        "args": [ { "var": "i" } ]
+      },
+      "body": [
+        {
+          "condition": {
+            "op": "<",
+            "args": [
+              { "op": "[]", "args": [ { "var": "a" }, { "var": "i" } ] },
+              { "lit": "0" }
+            ]
+          },
+          "then": [
+            {
+              "op": "+=",
+              "args": [ { "var": "c" }, { "lit": "1" } ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "op": "return",
+      "args": [ { "var": "c" } ]
+    }
+  ]
+}
