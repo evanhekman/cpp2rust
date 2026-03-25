@@ -1,0 +1,37 @@
+# Rust grammar symbols — derived from benchmark0 target functions
+# (dot_product, reverse, max_even_indexed, exception/first_negative)
+# This is the terminal alphabet the synthesizer needs to cover.
+
+# Primitive types
+i32  u32  u8  usize
+
+# Reference / slice types
+&[T]  &mut [T]
+
+# Keywords
+let  mut  fn  pub  for  while  if  return  in  as
+
+# Arithmetic operators
++  -  *
+
+# Comparison operators
+<  >  <=  >=  ==  !=
+
+# Assignment
+=  +=
+
+# Slice / index notation
+expr[idx]  expr.len()
+
+# Range notation
+0..expr
+
+# Cast
+expr as T
+
+# Type annotation
+let x: T = expr   ->   :
+
+# Literals
+# plain integers: 0, 1, 2, -1, ...
+# type-suffixed:  0usize, 2usize, 0u32

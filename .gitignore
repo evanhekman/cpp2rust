@@ -1,8 +1,11 @@
 .claude
 .ruff_cache
 .env
+.venv
 target
-
 verus
+verus-repo
+verus-proof-synthesis
+intermediate*
+
 !benchmark0/verus
-.env
