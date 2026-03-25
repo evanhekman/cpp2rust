@@ -629,7 +629,10 @@ pub fn extract_required_idents(
 
     let mut idents = Vec::new();
     for (i, p) in params.iter().enumerate() {
-        if !is_slice_type(&p.ty) && used_names.contains(p.name.as_str()) {
+        if is_slice_type(&p.ty) {
+            // Slice params are accessed via ExprIndex_{name}; always require them.
+            idents.push(format!("ExprIndex_{}", p.name));
+        } else if used_names.contains(p.name.as_str()) {
             idents.push(format!("ExprIdent_{}", i));
         }
     }
