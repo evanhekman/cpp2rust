@@ -66,6 +66,9 @@ pub struct Target {
     // Derived expected-Rust-node sequence for the AST heuristic (not in JSON)
     #[serde(skip)]
     pub ast_hints: Option<Vec<String>>,
+    // ExprIdent production names that must appear in the synthesized program (not in JSON)
+    #[serde(skip)]
+    pub required_idents: Vec<String>,
     // Expected block sizes in DFS pre-order (one per Block node in the correct tree)
     #[serde(skip)]
     pub block_sizes: Vec<usize>,
@@ -130,6 +133,7 @@ fn finish_load(mut t: Target, json_path: &Path) -> Result<Target, String> {
         t.ast_hints = Some(extract_ast_hints(ast, &slice_names));
         t.block_sizes = extract_block_sizes(ast);
         t.local_vars = extract_local_vars(ast, &t.params, &t.return_type);
+        t.required_idents = extract_required_idents(ast, &t.params, &t.local_vars);
     }
     Ok(t)
 }
@@ -602,6 +606,51 @@ fn ptr_source_elem(
         for x in a { if let Some(e) = ptr_source_elem(x, slice_params, slice_elem) { return Some(e); } }
     }
     None
+}
+
+// ── Variable ident extraction ─────────────────────────────────────────────────
+
+/// Walk the C++ AST and collect the names of variables that appear as
+/// `{"var":"x"}` nodes, then map them to the ExprIdent production names used
+/// in the Rust grammar.
+///
+/// Scalar params → `ExprIdent_{param_index}`  (same index as in build_grammar)
+/// Local vars    → `ExprIdent_local_{local_index}`
+///
+/// Only scalar params and local vars are included; slice params are accessed
+/// via ExprIndex/ExprLen and are not tracked here.
+pub fn extract_required_idents(
+    ast: &serde_json::Value,
+    params: &[Param],
+    local_vars: &[(String, String)],
+) -> Vec<String> {
+    let mut used_names = std::collections::HashSet::new();
+    collect_var_names(ast, &mut used_names);
+
+    let mut idents = Vec::new();
+    for (i, p) in params.iter().enumerate() {
+        if !is_slice_type(&p.ty) && used_names.contains(p.name.as_str()) {
+            idents.push(format!("ExprIdent_{}", i));
+        }
+    }
+    for (idx, (name, _)) in local_vars.iter().enumerate() {
+        if used_names.contains(name.as_str()) {
+            idents.push(format!("ExprIdent_local_{}", idx));
+        }
+    }
+    idents
+}
+
+fn collect_var_names(val: &serde_json::Value, names: &mut std::collections::HashSet<String>) {
+    if let Some(v) = val.get("var").and_then(|v| v.as_str()) {
+        names.insert(v.to_string());
+        return;
+    }
+    if let Some(obj) = val.as_object() {
+        for v in obj.values() { collect_var_names(v, names); }
+    } else if let Some(arr) = val.as_array() {
+        for v in arr { collect_var_names(v, names); }
+    }
 }
 
 // ── Other loaders ─────────────────────────────────────────────────────────────

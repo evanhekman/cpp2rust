@@ -9,11 +9,12 @@ pub struct HeuristicConfig {
     pub required:    bool,
     pub structural:  bool,
     pub block_sizes: bool,
+    pub vars:        bool,
 }
 
 impl Default for HeuristicConfig {
     fn default() -> Self {
-        Self { ordering: true, absent: true, required: true, structural: true, block_sizes: true }
+        Self { ordering: true, absent: true, required: true, structural: true, block_sizes: true, vars: true }
     }
 }
 
@@ -27,14 +28,15 @@ impl HeuristicConfig {
                 "required"    => cfg.required    = false,
                 "structural"  => cfg.structural  = false,
                 "block-sizes" => cfg.block_sizes = false,
-                other => eprintln!("warning: unknown heuristic '{}' (valid: ordering, absent, required, structural, block-sizes)", other),
+                "vars"        => cfg.vars        = false,
+                other => eprintln!("warning: unknown heuristic '{}' (valid: ordering, absent, required, structural, block-sizes, vars)", other),
             }
         }
         cfg
     }
 }
 
-pub fn score(node: &Node, features: Option<&CppFeatures>, ast_hints: Option<&[String]>, block_sizes: Option<&[usize]>, cfg: &HeuristicConfig) -> i64 {
+pub fn score(node: &Node, features: Option<&CppFeatures>, ast_hints: Option<&[String]>, block_sizes: Option<&[usize]>, required_idents: Option<&[String]>, cfg: &HeuristicConfig) -> i64 {
     let mut cost = 0i64;
     if let Some(hints) = ast_hints {
         // AST-derived heuristic: prioritise the verbatim translation,
@@ -46,6 +48,11 @@ pub fn score(node: &Node, features: Option<&CppFeatures>, ast_hints: Option<&[St
         if cfg.block_sizes {
             if let Some(sizes) = block_sizes {
                 cost += h_block_sizes(node, sizes);
+            }
+        }
+        if cfg.vars {
+            if let Some(idents) = required_idents {
+                cost += h_required_vars(node, idents);
             }
         }
     } else if let Some(f) = features {
@@ -222,6 +229,28 @@ pub fn h_required_hint_penalty(node: &Node, hints: &[String]) -> i64 {
         .filter(|h| h.starts_with("Expr"))
         .map(|hint| {
             let found = all_kinds.iter().any(|k| ast_feature_matches(k, hint));
+            if found { 0i64 } else { 3 }
+        })
+        .sum()
+}
+
+/// Penalty (+3 per missing ident) for complete programs that don't use a
+/// parameter or local variable that appears in the C++ AST.
+///
+/// `required_idents` is a list of ExprIdent production name prefixes derived
+/// from the C++ AST (e.g. ["ExprIdent_0", "ExprIdent_1"]).  Any complete
+/// program that doesn't contain a node whose kind starts with one of these
+/// prefixes gets penalised.  This prevents the search from wasting time on
+/// programs that ignore an expected parameter entirely.
+pub fn h_required_vars(node: &Node, required_idents: &[String]) -> i64 {
+    if !node.is_complete() || required_idents.is_empty() {
+        return 0;
+    }
+    let mut all_kinds: Vec<String> = Vec::new();
+    collect_all_kinds(node, &mut all_kinds);
+    required_idents.iter()
+        .map(|ident| {
+            let found = all_kinds.iter().any(|k| k.starts_with(ident.as_str()));
             if found { 0i64 } else { 3 }
         })
         .sum()

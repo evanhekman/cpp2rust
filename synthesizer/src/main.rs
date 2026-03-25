@@ -126,7 +126,7 @@ fn synthesize(
 
         if partial.is_complete() {
             candidates_tried += 1;
-            let cand_score = score(&partial, target.cpp_features.as_ref(), target.ast_hints.as_deref(), Some(&target.block_sizes), hcfg);
+            let cand_score = score(&partial, target.cpp_features.as_ref(), target.ast_hints.as_deref(), Some(&target.block_sizes), Some(&target.required_idents), hcfg);
             let _ = cand_score;
             if test_candidate(&partial, target, &grammar) {
                 return render(&partial, &grammar).ok();
@@ -171,7 +171,7 @@ fn synthesize(
                 continue;
             }
             let new_partial = partial.replace_at_path(&path, replacement);
-            let s = score(&new_partial, target.cpp_features.as_ref(), target.ast_hints.as_deref(), Some(&target.block_sizes), hcfg);
+            let s = score(&new_partial, target.cpp_features.as_ref(), target.ast_hints.as_deref(), Some(&target.block_sizes), Some(&target.required_idents), hcfg);
             worklist.push(new_partial, s);
         }
     }
@@ -301,6 +301,9 @@ fn main() {
     }
     if let Some(hints) = &target.ast_hints {
         println!("AST hints: {}", hints.join(" → "));
+    }
+    if !target.required_idents.is_empty() {
+        println!("Req idents: {}", target.required_idents.join(", "));
     }
     if !target.block_sizes.is_empty() {
         println!("Block sizes: {}", target.block_sizes.iter().map(|s| s.to_string()).collect::<Vec<_>>().join(" → "));
