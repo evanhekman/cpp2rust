@@ -11,11 +11,12 @@ pub struct HeuristicConfig {
     pub block_sizes: bool,
     pub vars:        bool,
     pub complete:    bool,
+    pub holes:       bool,
 }
 
 impl Default for HeuristicConfig {
     fn default() -> Self {
-        Self { ordering: true, absent: true, required: true, structural: true, block_sizes: true, vars: true, complete: true }
+        Self { ordering: true, absent: true, required: true, structural: true, block_sizes: true, vars: true, complete: true, holes: true }
     }
 }
 
@@ -31,7 +32,8 @@ impl HeuristicConfig {
                 "block-sizes" => cfg.block_sizes = false,
                 "vars"        => cfg.vars        = false,
                 "complete"    => cfg.complete    = false,
-                other => eprintln!("warning: unknown heuristic '{}' (valid: ordering, absent, required, structural, block-sizes, vars, complete)", other),
+                "holes"       => cfg.holes       = false,
+                other => eprintln!("warning: unknown heuristic '{}' (valid: ordering, absent, required, structural, block-sizes, vars, complete, holes)", other),
             }
         }
         cfg
@@ -58,12 +60,14 @@ pub fn score(node: &Node, features: Option<&CppFeatures>, ast_hints: Option<&[St
             }
         }
         if cfg.complete { cost += h_complete_bonus(node); }
+        if cfg.holes    { cost += h_hole_count_penalty(node); }
     } else if let Some(f) = features {
         // Fallback: text-scanned operator heuristics (dataset0 compat)
         if cfg.ordering  { cost += h_ordering_match(node, f); }
         if cfg.absent    { cost += h_absent_penalty(node, f); }
         if cfg.absent    { cost += h_overcount_penalty(node, f); }
         if cfg.complete  { cost += h_complete_bonus(node); }
+        if cfg.holes     { cost += h_hole_count_penalty(node); }
     }
     cost
 }
@@ -74,6 +78,20 @@ pub fn score(node: &Node, features: Option<&CppFeatures>, ast_hints: Option<&[St
 /// a partial with the same content-based score.
 pub fn h_complete_bonus(node: &Node) -> i64 {
     if node.is_complete() { -1 } else { 0 }
+}
+
+/// (+1 per remaining hole) gradient toward completion. Partial programs with
+/// fewer holes score better than deeply-partial ones with equal content score,
+/// steering the search toward finishing programs rather than exploring new ones.
+pub fn h_hole_count_penalty(node: &Node) -> i64 {
+    count_holes(node) as i64
+}
+
+fn count_holes(node: &Node) -> usize {
+    node.children.iter().map(|c| match c {
+        Child::Hole(_) => 1,
+        Child::Node(n) => count_holes(n),
+    }).sum()
 }
 
 // ── AST-based heuristics ──────────────────────────────────────────────────────
