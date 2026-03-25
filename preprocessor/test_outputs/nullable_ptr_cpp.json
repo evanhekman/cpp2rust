@@ -1,0 +1,69 @@
+{
+  "ast": [
+    {
+      "condition": {
+        "args": [
+          {
+            "var": "p"
+          },
+          {
+            "lit": "nullptr"
+          }
+        ],
+        "op": "=="
+      },
+      "then": [
+        {
+          "args": [
+            {
+              "lit": "-1"
+            }
+          ],
+          "op": "return"
+        }
+      ]
+    },
+    {
+      "condition": {
+        "args": [
+          {
+            "var": "p"
+          }
+        ],
+        "op": "!"
+      },
+      "then": [
+        {
+          "args": [
+            {
+              "lit": "-2"
+            }
+          ],
+          "op": "return"
+        }
+      ]
+    },
+    {
+      "args": [
+        {
+          "args": [
+            {
+              "var": "p"
+            }
+          ],
+          "op": "*"
+        }
+      ],
+      "op": "return"
+    }
+  ],
+  "name": "nullable_ptr",
+  "params": [
+    {
+      "name": "p",
+      "ptr_nullifiable": true,
+      "type": "int*"
+    }
+  ],
+  "return_type": "int"
+}
