@@ -206,6 +206,28 @@ fn translate_assign(args: Option<&Vec<serde_json::Value>>, ctx: &Ctx) -> Child {
     let args = match args { Some(a) => a, None => return Child::Hole("Stmt".into()) };
     let lhs  = match args.first() { Some(l) => l, None => return Child::Hole("Stmt".into()) };
 
+    // Pointer dereference lvalue: *ptr = expr → a[ptr] = expr
+    if lhs.get("op").and_then(|v| v.as_str()) == Some("*") {
+        if let Some(ptr_var) = lhs["args"].as_array()
+            .and_then(|a| a.first()).and_then(|v| v.get("var")).and_then(|v| v.as_str())
+        {
+            if let Some(local_idx) = ctx.local_vars.iter().position(|(n, _)| n == ptr_var) {
+                // Find slice param whose elem type we can assign to
+                if let Some(slice_p) = ctx.params.iter().find(|p| is_slice_type(&p.ty)) {
+                    let elem_ty = elem_type_of(&slice_p.ty).unwrap_or("i32".into());
+                    let elem_nt = format!("Expr_{}", elem_ty);
+                    let prd     = format!("StmtSliceAssign_{}", slice_p.name);
+                    if ctx.grammar.values().flatten().any(|p| p.name == prd) {
+                        let idx_prd = format!("ExprIdent_local_{}", local_idx);
+                        let idx     = Child::Node(Box::new(Node::new(&idx_prd, vec![], 0)));
+                        let val     = args.get(1).map(|e| translate_expr(e, &elem_nt, ctx)).unwrap_or(Child::Hole(elem_nt));
+                        return Child::Node(Box::new(Node::new(&prd, vec![idx, val], 0)));
+                    }
+                }
+            }
+        }
+    }
+
     // Slice assignment: a[i] = expr
     if lhs.get("op").and_then(|v| v.as_str()) == Some("[]") {
         if let Some(arr_args) = lhs["args"].as_array() {
@@ -255,7 +277,15 @@ fn translate_expr(node: &serde_json::Value, expected_nt: &str, ctx: &Ctx) -> Chi
         "*"  if arity==2 => translate_binop(args, "Mul",  expected_nt, ctx),
         "/"              => translate_binop(args, "Div",  expected_nt, ctx),
         "%"              => translate_binop(args, "Mod",  expected_nt, ctx),
-        "*"  if arity==1 => Child::Hole(expected_nt.into()), // pointer deref
+        "*"  if arity==1 => {
+            // Pointer dereference *ptr → ExprIndex_slice(ptr_ident)
+            let ptr_var = args.and_then(|a| a.first())
+                .and_then(|v| v.get("var")).and_then(|v| v.as_str());
+            match ptr_var {
+                Some(name) => translate_deref(name, expected_nt, ctx),
+                None       => Child::Hole(expected_nt.into()),
+            }
+        }
         "<" | ">" | "<=" | ">=" | "==" | "!=" => translate_cmp(args, op, ctx),
         "&&" => two_bool("ExprAnd", args, ctx),
         "||" => two_bool("ExprOr",  args, ctx),
@@ -272,6 +302,7 @@ fn translate_expr(node: &serde_json::Value, expected_nt: &str, ctx: &Ctx) -> Chi
 fn translate_lit(lit: &str, expected_nt: &str, ctx: &Ctx) -> Child {
     let prod_name = match expected_nt {
         "Expr_usize" => lit.parse::<i64>().ok().filter(|&n| n >= 0).and_then(|n| find_usize_lit(ctx.grammar, n as usize)),
+        "Expr_u32"   => lit.parse::<i64>().ok().filter(|&n| n >= 0).and_then(|n| find_u32_lit(ctx.grammar, n as u32)),
         "Expr_bool"  => {
             let val = lit == "true";
             ctx.grammar.get("Expr_bool").and_then(|ps| ps.iter().find(|p| p.literal_value == Some(Value::Bool(val)))).map(|p| p.name.clone())
@@ -287,6 +318,11 @@ fn translate_lit(lit: &str, expected_nt: &str, ctx: &Ctx) -> Child {
 }
 
 fn translate_var(name: &str, expected_nt: &str, ctx: &Ctx) -> Child {
+    // Slice param used directly as a variable → it's a pointer, not usable as usize/value.
+    // Only unknown variables (e.g. 'n') should fall through to translate_len_var.
+    if ctx.slice_names.contains(&name.to_string()) {
+        return Child::Hole(expected_nt.into());
+    }
     // Local variable
     for (idx, (vname, _)) in ctx.local_vars.iter().enumerate() {
         if vname == name {
@@ -346,6 +382,12 @@ fn translate_index(args: Option<&Vec<serde_json::Value>>, expected_nt: &str, ctx
 }
 
 fn translate_binop(args: Option<&Vec<serde_json::Value>>, op: &str, expected_nt: &str, ctx: &Ctx) -> Child {
+    // Pointer arithmetic (slice + offset or slice - offset) → translate as ExprLen_slice
+    if expected_nt == "Expr_usize" && matches!(op, "Add" | "Sub") {
+        if args.map(|a| a.iter().any(|x| is_ptr_arg(x, ctx))).unwrap_or(false) {
+            return translate_len_var(ctx);
+        }
+    }
     let suffix = match expected_nt { "Expr_i32" => "", "Expr_usize" => "_usize", "Expr_u32" => "_u32", _ => return Child::Hole(expected_nt.into()) };
     let prd    = format!("Expr{}{}", op, suffix);
     if !ctx.grammar.values().flatten().any(|p| p.name == prd) { return Child::Hole(expected_nt.into()); }

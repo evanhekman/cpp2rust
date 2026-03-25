@@ -47,6 +47,9 @@ struct Cli {
     disable_heuristic: Vec<String>,
     #[arg(long, default_value_t = 1_000_000)]
     worklist_cap: usize,
+    /// Print the verbatim C++ translation seed and exit (no synthesis).
+    #[arg(long)]
+    show_seed: bool,
 }
 
 fn fmt_count(n: u128) -> String {
@@ -340,6 +343,25 @@ fn main() {
     if !target.block_sizes.is_empty() {
         println!("Block sizes: {}", target.block_sizes.iter().map(|s| s.to_string()).collect::<Vec<_>>().join(" → "));
     }
+    if cli.show_seed {
+        let grammar = {
+            let mut g = build_grammar(&literals, &target.params, &target.local_vars, &target.return_type);
+            register_fn_def_known(&target, &mut g);
+            g
+        };
+        match target.ast.as_ref().and_then(|ast| translator::translate(ast, &target.params, &target.local_vars, &grammar, &target.return_type)) {
+            Some(block) => {
+                let root = Node::new(&format!("FnDefKnown_{}", target.name), vec![Child::Node(Box::new(block))], 0);
+                match codegen::render(&root, &grammar) {
+                    Ok(src) => println!("{}", src),
+                    Err(e)  => println!("(render error: {:?})", e),
+                }
+            }
+            None => println!("(no translation available)"),
+        }
+        return;
+    }
+
     let hcfg = HeuristicConfig::from_disabled(&cli.disable_heuristic);
     let disabled_str = if cli.disable_heuristic.is_empty() {
         "none".to_string()
