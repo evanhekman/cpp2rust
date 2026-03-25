@@ -11,14 +11,16 @@ mod eval;
 mod grammar;
 mod heuristics;
 mod loader;
+mod neighbors;
 mod oracle;
+mod translator;
 mod worklist;
 
 use ast::{Child, Node};
 use canonicalize::should_prune;
 use codegen::render;
 use eval::eval_fn;
-use grammar::{build_grammar, count_programs, register_fn_def_known};
+use grammar::{build_grammar, build_reverse_map, count_programs, register_fn_def_known};
 use heuristics::{score, HeuristicConfig};
 use loader::{load_symbols, load_target, load_target_file, parse_env};
 use worklist::Worklist;
@@ -100,10 +102,37 @@ fn synthesize(
     let mut grammar = build_grammar(literals, &target.params, &target.local_vars, &target.return_type);
     let kind = register_fn_def_known(target, &mut grammar);
     let candidates_possible = count_programs(&grammar, &kind, max_depth);
+    let reverse_map = build_reverse_map(&grammar);
 
     let root = Node::new(&kind, vec![Child::Hole("Block".into())], 0);
     let mut worklist = Worklist::with_capacity(worklist_cap);
-    worklist.push(root, 0);
+    let mut visited: std::collections::HashSet<u64> = std::collections::HashSet::new();
+
+    // Seed with the verbatim C++ translation if available, and its neighbors.
+    if let Some(ast) = &target.ast {
+        if let Some(block) = translator::translate(ast, &target.params, &target.local_vars, &grammar, &target.return_type) {
+            let translated = root.replace_at_path(&[0], block);
+            let h = translated.structural_hash();
+            if visited.insert(h) {
+                let s = score(&translated, target.cpp_features.as_ref(), target.ast_hints.as_deref(), Some(&target.block_sizes), Some(&target.required_idents), hcfg);
+                worklist.push(translated.clone(), s.min(-10));
+                // Seed neighbors of the translation (one subtree punched out each)
+                for nbr in neighbors::neighbors(&translated, &reverse_map, 4) {
+                    let nh = nbr.structural_hash();
+                    if visited.insert(nh) {
+                        let ns = score(&nbr, target.cpp_features.as_ref(), target.ast_hints.as_deref(), Some(&target.block_sizes), Some(&target.required_idents), hcfg);
+                        worklist.push(nbr, ns);
+                    }
+                }
+            }
+        }
+    }
+
+    // Always also seed the generic root-hole so the search is complete.
+    let root_hash = root.structural_hash();
+    if visited.insert(root_hash) {
+        worklist.push(root, 0);
+    }
 
     let deadline = Instant::now() + Duration::from_secs(timeout);
     let mut candidates_tried: u64 = 0;
@@ -129,8 +158,6 @@ fn synthesize(
 
         if partial.is_complete() {
             candidates_tried += 1;
-            let cand_score = score(&partial, target.cpp_features.as_ref(), target.ast_hints.as_deref(), Some(&target.block_sizes), Some(&target.required_idents), hcfg);
-            let _ = cand_score;
             if test_candidate(&partial, target, &grammar) {
                 return render(&partial, &grammar).ok().map(|src| (src, candidates_tried, nodes_expanded));
             }
@@ -174,6 +201,8 @@ fn synthesize(
                 continue;
             }
             let new_partial = partial.replace_at_path(&path, replacement);
+            let h = new_partial.structural_hash();
+            if !visited.insert(h) { continue; }
             let s = score(&new_partial, target.cpp_features.as_ref(), target.ast_hints.as_deref(), Some(&target.block_sizes), Some(&target.required_idents), hcfg);
             worklist.push(new_partial, s);
         }
