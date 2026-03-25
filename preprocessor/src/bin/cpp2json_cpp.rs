@@ -10,6 +10,7 @@
 //!   cargo run --bin cpp2json_cpp -- <input.cpp> [--out out.json]
 
 use anyhow::{bail, Context, Result};
+use regex::Regex;
 use serde_json::{json, Value};
 use std::fs;
 use std::path::PathBuf;
@@ -36,7 +37,7 @@ fn main() -> Result<()> {
 
     let func = find_first_kind(root, "function_definition")
         .ok_or_else(|| anyhow::anyhow!("no function_definition found"))?;
-    let out_json = function_to_json(func, src.as_bytes())?;
+    let out_json = function_to_json(func, &src, src.as_bytes())?;
     let rendered = serde_json::to_string_pretty(&out_json)?;
 
     if let Some(path) = out {
@@ -51,7 +52,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn function_to_json(func: Node<'_>, src: &[u8]) -> Result<Value> {
+fn function_to_json(func: Node<'_>, whole_src: &str, src: &[u8]) -> Result<Value> {
     let ret_type = func
         .child_by_field_name("type")
         .map(|n| text(n, src))
@@ -66,7 +67,7 @@ fn function_to_json(func: Node<'_>, src: &[u8]) -> Result<Value> {
     let body = func
         .child_by_field_name("body")
         .ok_or_else(|| anyhow::anyhow!("function missing body"))?;
-    let ast = compound_to_stmts(body, src);
+    let ast = compound_to_stmts(body, whole_src, src);
 
     Ok(json!({
         "name": name,
@@ -105,20 +106,20 @@ fn function_params(fd: Node<'_>, src: &[u8]) -> Vec<Value> {
     out
 }
 
-fn compound_to_stmts(compound: Node<'_>, src: &[u8]) -> Vec<Value> {
+fn compound_to_stmts(compound: Node<'_>, whole_src: &str, src: &[u8]) -> Vec<Value> {
     let mut out = Vec::new();
     for i in 0u32..(compound.named_child_count() as u32) {
         let Some(st) = compound.named_child(i) else { continue };
-        if let Some(v) = stmt(st, src) {
+        if let Some(v) = stmt(st, whole_src, src) {
             out.push(v);
         }
     }
     out
 }
 
-fn stmt(n: Node<'_>, src: &[u8]) -> Option<Value> {
+fn stmt(n: Node<'_>, whole_src: &str, src: &[u8]) -> Option<Value> {
     match n.kind() {
-        "declaration" => decl_stmt(n, src),
+        "declaration" => decl_stmt(n, whole_src, src),
         "expression_statement" => {
             let expr_node = n.named_child(0)?;
             Some(expr(expr_node, src))
@@ -134,7 +135,7 @@ fn stmt(n: Node<'_>, src: &[u8]) -> Option<Value> {
         "for_statement" => {
             let init = n
                 .child_by_field_name("initializer")
-                .and_then(|x| stmt_or_expr(x, src))
+                .and_then(|x| stmt_or_expr(x, whole_src, src))
                 .unwrap_or_else(|| json!({ "op": "nop", "args": [] }));
             let condition = n
                 .child_by_field_name("condition")
@@ -146,7 +147,7 @@ fn stmt(n: Node<'_>, src: &[u8]) -> Option<Value> {
                 .unwrap_or_else(|| json!({ "op": "nop", "args": [] }));
             let body = n
                 .child_by_field_name("body")
-                .map(|b| block_to_vec(b, src))
+                .map(|b| block_to_vec(b, whole_src, src))
                 .unwrap_or_default();
             Some(json!({
                 "init": init,
@@ -162,7 +163,7 @@ fn stmt(n: Node<'_>, src: &[u8]) -> Option<Value> {
                 .unwrap_or_else(|| json!({ "lit": "true" }));
             let body = n
                 .child_by_field_name("body")
-                .map(|b| block_to_vec(b, src))
+                .map(|b| block_to_vec(b, whole_src, src))
                 .unwrap_or_default();
             Some(json!({ "condition": condition, "body": body }))
         }
@@ -173,13 +174,13 @@ fn stmt(n: Node<'_>, src: &[u8]) -> Option<Value> {
                 .unwrap_or_else(|| json!({ "lit": "false" }));
             let then_body = n
                 .child_by_field_name("consequence")
-                .map(|b| block_to_vec(b, src))
+                .map(|b| block_to_vec(b, whole_src, src))
                 .unwrap_or_default();
             let mut obj = serde_json::Map::new();
             obj.insert("condition".to_string(), condition);
             obj.insert("then".to_string(), Value::Array(then_body));
             if let Some(alt) = n.child_by_field_name("alternative") {
-                obj.insert("else".to_string(), Value::Array(block_to_vec(alt, src)));
+                obj.insert("else".to_string(), Value::Array(block_to_vec(alt, whole_src, src)));
             }
             Some(Value::Object(obj))
         }
@@ -189,19 +190,19 @@ fn stmt(n: Node<'_>, src: &[u8]) -> Option<Value> {
     }
 }
 
-fn stmt_or_expr(n: Node<'_>, src: &[u8]) -> Option<Value> {
-    stmt(n, src).or_else(|| Some(expr(n, src)))
+fn stmt_or_expr(n: Node<'_>, whole_src: &str, src: &[u8]) -> Option<Value> {
+    stmt(n, whole_src, src).or_else(|| Some(expr(n, src)))
 }
 
-fn block_to_vec(n: Node<'_>, src: &[u8]) -> Vec<Value> {
+fn block_to_vec(n: Node<'_>, whole_src: &str, src: &[u8]) -> Vec<Value> {
     if n.kind() == "compound_statement" {
-        compound_to_stmts(n, src)
+        compound_to_stmts(n, whole_src, src)
     } else {
-        stmt(n, src).into_iter().collect()
+        stmt(n, whole_src, src).into_iter().collect()
     }
 }
 
-fn decl_stmt(n: Node<'_>, src: &[u8]) -> Option<Value> {
+fn decl_stmt(n: Node<'_>, whole_src: &str, src: &[u8]) -> Option<Value> {
     // Handle "int x = 0;" and "int x;"
     let mut target: Option<Node<'_>> = None;
     for i in 0u32..(n.named_child_count() as u32) {
@@ -214,14 +215,25 @@ fn decl_stmt(n: Node<'_>, src: &[u8]) -> Option<Value> {
     let d = target?;
     let lhs_decl = d.child_by_field_name("declarator")?;
     let var_name = base_name(lhs_decl, src);
+    let is_ptr = text(lhs_decl, src).contains('*');
+    let ptr_null_compared_or_assigned = if is_ptr {
+        has_nullptr_usage(whole_src, &var_name)
+    } else {
+        false
+    };
     let rhs = d
         .child_by_field_name("value")
         .map(|v| expr(v, src))
         .unwrap_or_else(|| json!({ "lit": "0" }));
-    Some(json!({
-        "op": "let",
-        "args": [{ "var": var_name }, rhs]
-    }))
+    let lhs = if is_ptr {
+        json!({
+            "var": var_name,
+            "ptr_null_compared_or_assigned": ptr_null_compared_or_assigned
+        })
+    } else {
+        json!({ "var": var_name })
+    };
+    Some(json!({ "op": "let", "args": [lhs, rhs] }))
 }
 
 fn expr(n: Node<'_>, src: &[u8]) -> Value {
@@ -312,5 +324,27 @@ fn find_first_kind<'a>(node: Node<'a>, kind: &str) -> Option<Node<'a>> {
 
 fn text(n: Node<'_>, src: &[u8]) -> String {
     n.utf8_text(src).unwrap_or("").trim().to_string()
+}
+
+fn has_nullptr_usage(source: &str, var_name: &str) -> bool {
+    let v = regex::escape(var_name);
+    let vp = format!(r"\b{v}\b");
+    let np = r"(nullptr|NULL)";
+    let patterns = [
+        // comparisons
+        format!(r"{vp}\s*==\s*{np}"),
+        format!(r"{vp}\s*!=\s*{np}"),
+        format!(r"{np}\s*==\s*{vp}"),
+        format!(r"{np}\s*!=\s*{vp}"),
+        // assignments
+        format!(r"{vp}\s*=\s*{np}"),
+        format!(r"{vp}\s*=\s*\(?\s*{np}\s*\)?"),
+        // guard conditions
+        format!(r"(?:if|while)\s*\(\s*!?\s*{vp}\s*\)"),
+    ];
+    patterns
+        .iter()
+        .filter_map(|p| Regex::new(p).ok())
+        .any(|re| re.is_match(source))
 }
 
