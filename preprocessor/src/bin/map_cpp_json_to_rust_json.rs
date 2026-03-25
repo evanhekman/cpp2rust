@@ -1,0 +1,137 @@
+//! Map benchmark-style C++ JSON to Rust-typed JSON.
+//!
+//! Input format (example): `preprocessor/test_outputs/dot_product_cpp.json`
+//! Output format: same shape, with `params[].type` and `return_type` mapped to Rust types.
+//!
+//! Usage:
+//!   cargo run -p cpp_preprocessor --bin map_cpp_json_to_rust_json -- <in.json> [--out out.json]
+
+use anyhow::{bail, Context, Result};
+use serde_json::{json, Value};
+use std::fs;
+use std::path::PathBuf;
+
+fn main() -> Result<()> {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.is_empty() {
+        eprintln!("Usage: map_cpp_json_to_rust_json <in.json> [--out out.json]");
+        std::process::exit(1);
+    }
+
+    let in_path = PathBuf::from(&args[0]);
+    let mut out_path: Option<PathBuf> = None;
+    if args.len() >= 3 && args[1] == "--out" {
+        out_path = Some(PathBuf::from(&args[2]));
+    } else if args.len() > 1 {
+        bail!("unexpected args: {:?}", &args[1..]);
+    }
+
+    let raw = fs::read_to_string(&in_path).with_context(|| format!("read {}", in_path.display()))?;
+    let mut doc: Value = serde_json::from_str(&raw).context("parse input JSON")?;
+
+    map_types_in_place(&mut doc);
+    drop_len_param_for_slice_style(&mut doc);
+
+    let rendered = serde_json::to_string_pretty(&doc)?;
+    if let Some(p) = out_path {
+        if let Some(parent) = p.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(&p, rendered).with_context(|| format!("write {}", p.display()))?;
+        eprintln!("Wrote {}", p.display());
+    } else {
+        println!("{rendered}");
+    }
+    Ok(())
+}
+
+fn map_types_in_place(doc: &mut Value) {
+    if let Some(params) = doc.get_mut("params").and_then(Value::as_array_mut) {
+        for p in params {
+            let name = p.get("name").and_then(Value::as_str).unwrap_or("").to_string();
+            let ty = p.get("type").and_then(Value::as_str).unwrap_or("").to_string();
+            if ty.is_empty() {
+                continue;
+            }
+            let mapped = map_cpp_type_to_rust(&ty);
+            *p = json!({ "name": name, "type": mapped });
+        }
+    }
+
+    if let Some(ret) = doc.get_mut("return_type") {
+        match ret {
+            Value::Null => {}
+            Value::String(s) => {
+                if s.trim() == "void" {
+                    *ret = Value::Null;
+                } else {
+                    *ret = Value::String(map_cpp_type_to_rust(s));
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+fn drop_len_param_for_slice_style(doc: &mut Value) {
+    let Some(params) = doc.get_mut("params").and_then(Value::as_array_mut) else {
+        return;
+    };
+    let has_slice_like = params.iter().any(|p| {
+        p.get("type")
+            .and_then(Value::as_str)
+            .map(|t| t.starts_with("&[") || t.starts_with("&mut ["))
+            .unwrap_or(false)
+    });
+    if !has_slice_like {
+        return;
+    }
+    params.retain(|p| {
+        let name = p.get("name").and_then(Value::as_str).unwrap_or("");
+        let ty = p.get("type").and_then(Value::as_str).unwrap_or("");
+        let is_len = name == "n" || name == "len" || name == "size";
+        let is_int_like = matches!(ty, "i32" | "u32" | "usize");
+        !(is_len && is_int_like)
+    });
+}
+
+fn map_cpp_type_to_rust(cpp_type: &str) -> String {
+    let mut t = cpp_type.replace("const", "");
+    t = t.split_whitespace().collect::<Vec<_>>().join(" ");
+    let t = t.trim().to_string();
+
+    // Pointer-like: convert to slices by element type.
+    if t.ends_with('*') {
+        let base = t.trim_end_matches('*').trim();
+        return match base {
+            "uint8_t" | "unsigned char" => "&[u8]".to_string(),
+            "int8_t" | "char" | "signed char" => "&[i8]".to_string(),
+            "uint16_t" | "unsigned short" => "&[u16]".to_string(),
+            "int16_t" | "short" => "&[i16]".to_string(),
+            "uint32_t" | "unsigned int" => "&[u32]".to_string(),
+            "int32_t" | "int" => "&[i32]".to_string(),
+            "uint64_t" | "unsigned long long" => "&[u64]".to_string(),
+            "int64_t" | "long long" => "&[i64]".to_string(),
+            "float" => "&[f32]".to_string(),
+            "double" => "&[f64]".to_string(),
+            other => format!("&[{other}]"),
+        };
+    }
+
+    match t.as_str() {
+        "bool" => "bool".to_string(),
+        "uint8_t" | "unsigned char" => "u8".to_string(),
+        "int8_t" | "char" | "signed char" => "i8".to_string(),
+        "uint16_t" | "unsigned short" => "u16".to_string(),
+        "int16_t" | "short" => "i16".to_string(),
+        "uint32_t" | "unsigned int" => "u32".to_string(),
+        "int32_t" | "int" => "i32".to_string(),
+        "uint64_t" | "unsigned long long" => "u64".to_string(),
+        "int64_t" | "long long" => "i64".to_string(),
+        "size_t" => "usize".to_string(),
+        "float" => "f32".to_string(),
+        "double" => "f64".to_string(),
+        other => other.to_string(),
+    }
+}
+
