@@ -54,21 +54,20 @@ pub fn score(node: &Node, features: Option<&CppFeatures>, ast_hints: Option<&[St
                 cost += h_block_sizes(node, sizes);
             }
         }
-        if cfg.vars {
-            if let Some(idents) = required_idents {
-                cost += h_required_vars(node, idents);
-            }
-        }
-        if cfg.complete { cost += h_complete_bonus(node); }
-        if cfg.holes    { cost += h_hole_count_penalty(node); }
     } else if let Some(f) = features {
         // Fallback: text-scanned operator heuristics (dataset0 compat)
         if cfg.ordering  { cost += h_ordering_match(node, f); }
         if cfg.absent    { cost += h_absent_penalty(node, f); }
         if cfg.absent    { cost += h_overcount_penalty(node, f); }
-        if cfg.complete  { cost += h_complete_bonus(node); }
-        if cfg.holes     { cost += h_hole_count_penalty(node); }
     }
+    // Universal heuristics: apply regardless of dataset format
+    if cfg.vars {
+        if let Some(idents) = required_idents {
+            cost += h_required_vars(node, idents);
+        }
+    }
+    if cfg.complete { cost += h_complete_bonus(node); }
+    if cfg.holes    { cost += h_hole_count_penalty(node); }
     cost
 }
 
