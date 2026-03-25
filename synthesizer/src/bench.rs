@@ -25,6 +25,10 @@ struct Cli {
     /// Specific targets to benchmark (default: all)
     #[arg(long, num_args = 1..)]
     targets: Vec<String>,
+    /// Disable a heuristic by name (repeatable). Valid names:
+    /// ordering, absent, required, structural, block-sizes
+    #[arg(long, value_name = "NAME")]
+    disable_heuristic: Vec<String>,
 }
 
 fn synth_binary() -> PathBuf {
@@ -116,8 +120,11 @@ fn run_once(binary: &PathBuf, target: &str, cli: &Cli, json_file: Option<&PathBu
     }
     cmd.args([
         "--max-depth", &cli.max_depth.to_string(),
-        "--timeout", &cli.timeout.to_string(),
+        "--timeout",   &cli.timeout.to_string(),
     ]);
+    for name in &cli.disable_heuristic {
+        cmd.args(["--disable-heuristic", name]);
+    }
     let output = cmd.output().expect("failed to run synth binary");
     let elapsed = t0.elapsed().as_secs_f64();
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -163,11 +170,17 @@ fn main() {
     };
 
     let mode = if cpp_dir.is_some() { "C++ dataset" } else { "JSON dataset" };
+    let disabled_str = if cli.disable_heuristic.is_empty() {
+        "none".to_string()
+    } else {
+        cli.disable_heuristic.join(", ")
+    };
     println!("Benchmarking {} targets, {} run(s) each  [{}]", targets.len(), cli.runs, mode);
     println!(
-        "max-depth={}  timeout={}s  binary={}",
+        "max-depth={}  timeout={}s  disabled={}  binary={}",
         cli.max_depth,
         cli.timeout,
+        disabled_str,
         binary.display()
     );
     println!();

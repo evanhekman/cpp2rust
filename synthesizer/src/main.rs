@@ -19,7 +19,7 @@ use canonicalize::should_prune;
 use codegen::render;
 use eval::eval_fn;
 use grammar::{build_grammar, count_programs, register_fn_def_known};
-use heuristics::score;
+use heuristics::{score, HeuristicConfig};
 use loader::{load_symbols, load_target, load_target_file, parse_env};
 use worklist::Worklist;
 
@@ -39,6 +39,10 @@ struct Cli {
     max_depth: usize,
     #[arg(long, default_value_t = 300)]
     timeout: u64,
+    /// Disable a heuristic by name (repeatable). Valid names:
+    /// ordering, absent, required, structural, block-sizes
+    #[arg(long, value_name = "NAME")]
+    disable_heuristic: Vec<String>,
 }
 
 fn fmt_count(n: u128) -> String {
@@ -88,6 +92,7 @@ fn synthesize(
     max_depth: usize,
     timeout: u64,
     interrupted: &Arc<AtomicBool>,
+    hcfg: &HeuristicConfig,
 ) -> Option<String> {
     let mut grammar = build_grammar(literals, &target.params, &target.local_vars, &target.return_type);
     let kind = register_fn_def_known(target, &mut grammar);
@@ -121,7 +126,7 @@ fn synthesize(
 
         if partial.is_complete() {
             candidates_tried += 1;
-            let cand_score = score(&partial, target.cpp_features.as_ref(), target.ast_hints.as_deref(), Some(&target.block_sizes));
+            let cand_score = score(&partial, target.cpp_features.as_ref(), target.ast_hints.as_deref(), Some(&target.block_sizes), hcfg);
             let _ = cand_score;
             if test_candidate(&partial, target, &grammar) {
                 return render(&partial, &grammar).ok();
@@ -166,7 +171,7 @@ fn synthesize(
                 continue;
             }
             let new_partial = partial.replace_at_path(&path, replacement);
-            let s = score(&new_partial, target.cpp_features.as_ref(), target.ast_hints.as_deref(), Some(&target.block_sizes));
+            let s = score(&new_partial, target.cpp_features.as_ref(), target.ast_hints.as_deref(), Some(&target.block_sizes), hcfg);
             worklist.push(new_partial, s);
         }
     }
@@ -300,15 +305,22 @@ fn main() {
     if !target.block_sizes.is_empty() {
         println!("Block sizes: {}", target.block_sizes.iter().map(|s| s.to_string()).collect::<Vec<_>>().join(" → "));
     }
+    let hcfg = HeuristicConfig::from_disabled(&cli.disable_heuristic);
+    let disabled_str = if cli.disable_heuristic.is_empty() {
+        "none".to_string()
+    } else {
+        cli.disable_heuristic.join(", ")
+    };
     println!(
-        "Literals:  {}  Max depth: {}  Timeout: {}s\n",
+        "Literals:  {}  Max depth: {}  Timeout: {}s  Disabled: {}\n",
         literals.len(),
         cli.max_depth,
-        cli.timeout
+        cli.timeout,
+        disabled_str,
     );
 
     let t0 = Instant::now();
-    let result = synthesize(&target, &literals, cli.max_depth, cli.timeout, &interrupted);
+    let result = synthesize(&target, &literals, cli.max_depth, cli.timeout, &interrupted, &hcfg);
     let elapsed = t0.elapsed().as_secs_f64();
 
     if let Some(src) = result {

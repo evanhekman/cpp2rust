@@ -1,0 +1,21 @@
+{
+  "name": "second_element",
+  "params": [
+    { "name": "a", "type": "&[i32]" }
+  ],
+  "return_type": "i32",
+  "test_cases": [
+    { "inputs": ["[1,2,3,4,5]"], "expected_output": "2" },
+    { "inputs": ["[10,20]"],     "expected_output": "20" },
+    { "inputs": ["[-3,7,-1]"],   "expected_output": "7" },
+    { "inputs": ["[0,5]"],       "expected_output": "5" }
+  ],
+  "ast": [
+    {
+      "op": "return",
+      "args": [
+        { "op": "[]", "args": [ { "var": "a" }, { "lit": "1" } ] }
+      ]
+    }
+  ]
+}
