@@ -374,8 +374,12 @@ fn translate_index(args: Option<&Vec<serde_json::Value>>, expected_nt: &str, ctx
         Some(n) => n, None => return Child::Hole(expected_nt.into())
     };
     let prd = format!("ExprIndex_{}", arr_name);
-    if !ctx.grammar.values().flatten().any(|p| p.name == prd) {
-        return Child::Hole(expected_nt.into());
+    // Check the production exists and produces the expected type
+    let prod_nt = ctx.grammar.values().flatten().find(|p| p.name == prd).map(|p| p.nonterminal.as_str());
+    match prod_nt {
+        None => return Child::Hole(expected_nt.into()),
+        Some(nt) if nt != expected_nt => return Child::Hole(expected_nt.into()),
+        _ => {}
     }
     let idx = args.get(1).map(|e| translate_expr(e, "Expr_usize", ctx)).unwrap_or(Child::Hole("Expr_usize".into()));
     Child::Node(Box::new(Node::new(&prd, vec![idx], 0)))
@@ -467,4 +471,41 @@ fn find_usize_lit(grammar: &Grammar, val: usize) -> Option<String> {
     grammar.get("Expr_usize")?.iter()
         .find(|p| p.literal_value == Some(Value::Usize(val)))
         .map(|p| p.name.clone())
+}
+
+fn find_u32_lit(grammar: &Grammar, val: u32) -> Option<String> {
+    grammar.get("Expr_u32")?.iter()
+        .find(|p| p.literal_value == Some(Value::U32(val)))
+        .map(|p| p.name.clone())
+}
+
+/// Returns true if `node` refers to a slice parameter (a C++ pointer arg).
+fn is_ptr_arg(node: &serde_json::Value, ctx: &Ctx) -> bool {
+    node.get("var")
+        .and_then(|v| v.as_str())
+        .map(|name| ctx.slice_names.contains(&name.to_string()))
+        .unwrap_or(false)
+}
+
+/// Translate a pointer dereference `*ptr` where `ptr` is a local variable.
+/// Maps to `ExprIndex_{slice}(ExprIdent_local_{idx})`.
+fn translate_deref(ptr_name: &str, expected_nt: &str, ctx: &Ctx) -> Child {
+    // Find the local variable index for ptr_name
+    let local_idx = match ctx.local_vars.iter().position(|(n, _)| n == ptr_name) {
+        Some(i) => i,
+        None => return Child::Hole(expected_nt.into()),
+    };
+    // Find a slice param whose element type matches expected_nt
+    for slice_p in ctx.params.iter().filter(|p| is_slice_type(&p.ty)) {
+        let elem_ty = match elem_type_of(&slice_p.ty) { Some(t) => t, None => continue };
+        let elem_nt = format!("Expr_{}", elem_ty);
+        if elem_nt != expected_nt { continue; }
+        let prd = format!("ExprIndex_{}", slice_p.name);
+        if ctx.grammar.values().flatten().any(|p| p.name == prd) {
+            let idx_prd = format!("ExprIdent_local_{}", local_idx);
+            let idx = Child::Node(Box::new(Node::new(&idx_prd, vec![], 0)));
+            return Child::Node(Box::new(Node::new(&prd, vec![idx], 0)));
+        }
+    }
+    Child::Hole(expected_nt.into())
 }
