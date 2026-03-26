@@ -58,7 +58,8 @@ pub fn translate(
 // ── Block ─────────────────────────────────────────────────────────────────────
 
 fn translate_block(stmts: &[serde_json::Value], ctx: &Ctx) -> Child {
-    let block_kind = match stmts.len() {
+    let children: Vec<Child> = stmts.iter().flat_map(|s| translate_stmt(s, ctx)).collect();
+    let block_kind = match children.len() {
         1 => "BlockSingle",
         2 => "BlockSeq",
         3 => "BlockSeq3",
@@ -66,71 +67,133 @@ fn translate_block(stmts: &[serde_json::Value], ctx: &Ctx) -> Child {
         5 => "BlockSeq5",
         _ => return Child::Hole("Block".into()),
     };
-    let children: Vec<Child> = stmts.iter().map(|s| translate_stmt(s, ctx)).collect();
     Child::Node(Box::new(Node::new(block_kind, children, 0)))
 }
 
 // ── Statement dispatch ────────────────────────────────────────────────────────
 
-fn translate_stmt(node: &serde_json::Value, ctx: &Ctx) -> Child {
+/// Returns 1 child normally, or 2 children when a C++ for-with-step expands to
+/// `let mut var = 0; while var < N { body; var += step; }`.
+fn translate_stmt(node: &serde_json::Value, ctx: &Ctx) -> Vec<Child> {
     // For loop: has "init" field
     if node.get("init").is_some() { return translate_for(node, ctx); }
 
-    // While loop: "condition" + "body", no "then"
-    if node.get("condition").is_some() && node.get("body").is_some() && node.get("then").is_none() {
-        return translate_while(node, ctx);
-    }
-
-    // If / if-else: "condition" + "then"
-    if node.get("condition").is_some() && node.get("then").is_some() {
-        return translate_if(node, ctx);
-    }
-
-    // Try/catch: transparent — just translate the body
-    if node.get("catch").is_some() {
+    let child = if node.get("condition").is_some() && node.get("body").is_some() && node.get("then").is_none() {
+        translate_while(node, ctx)
+    } else if node.get("condition").is_some() && node.get("then").is_some() {
+        translate_if(node, ctx)
+    } else if node.get("catch").is_some() {
         if let Some(body) = node["body"].as_array() {
-            return translate_block(body, ctx);
+            translate_block(body, ctx)
+        } else {
+            Child::Hole("Stmt".into())
         }
-        return Child::Hole("Stmt".into());
-    }
-
-    let op  = match node.get("op").and_then(|v| v.as_str()) { Some(o) => o, None => return Child::Hole("Stmt".into()) };
-    let args = node["args"].as_array();
-
-    match op {
-        "let"        => translate_let(args, ctx),
-        "return"
-        | "throw"    => translate_return(args, ctx),
-        "+="         => translate_compound(args, true,  ctx),
-        "-="         => translate_compound(args, false, ctx),
-        "++"         => translate_increment(args, true,  ctx),
-        "--"         => translate_increment(args, false, ctx),
-        "="          => translate_assign(args, ctx),
-        _            => Child::Hole("Stmt".into()),
-    }
+    } else {
+        let op   = match node.get("op").and_then(|v| v.as_str()) { Some(o) => o, None => return vec![Child::Hole("Stmt".into())] };
+        let args = node["args"].as_array();
+        match op {
+            "let"        => translate_let(args, ctx),
+            "return"
+            | "throw"    => translate_return(args, ctx),
+            "+="         => translate_compound(args, true,  ctx),
+            "-="         => translate_compound(args, false, ctx),
+            "++"         => translate_increment(args, true,  ctx),
+            "--"         => translate_increment(args, false, ctx),
+            "="          => translate_assign(args, ctx),
+            _            => Child::Hole("Stmt".into()),
+        }
+    };
+    vec![child]
 }
 
 // ── Statement translators ─────────────────────────────────────────────────────
 
-fn translate_for(node: &serde_json::Value, ctx: &Ctx) -> Child {
+fn translate_for(node: &serde_json::Value, ctx: &Ctx) -> Vec<Child> {
     let loop_var = node["init"]["args"].as_array()
         .and_then(|a| a.first())
         .and_then(|v| v.get("var"))
         .and_then(|v| v.as_str());
-    let var_name = match loop_var { Some(v) => v, None => return Child::Hole("Stmt".into()) };
+    let var_name = match loop_var { Some(v) => v, None => return vec![Child::Hole("Stmt".into())] };
 
-    let prefix   = format!("StmtFor_{}_", var_name);
-    let prod     = match find_prefix(ctx.grammar, &prefix) { Some(p) => p.name.clone(), None => return Child::Hole("Stmt".into()) };
+    let body_stmts = match node["body"].as_array() { Some(s) => s, None => return vec![Child::Hole("Stmt".into())] };
 
     let upper = node["condition"]["args"].as_array().and_then(|a| a.get(1));
     let upper_child = match upper {
         Some(ub) => translate_upper_bound(ub, ctx),
         None     => Child::Hole("Expr_usize".into()),
     };
-    let body_stmts = match node["body"].as_array() { Some(s) => s, None => return Child::Hole("Stmt".into()) };
-    let body = translate_block(body_stmts, ctx);
 
-    Child::Node(Box::new(Node::new(&prod, vec![upper_child, body], 0)))
+    // Detect the update step — ++ or += 1 → for loop; otherwise → while loop
+    let step = for_update_step(node.get("update"));
+    if step == Some(1) || step.is_none() && node.get("update").is_none() {
+        // Standard for loop
+        let prefix = format!("StmtFor_{}_", var_name);
+        let prod   = match find_prefix(ctx.grammar, &prefix) { Some(p) => p.name.clone(), None => return vec![Child::Hole("Stmt".into())] };
+        let body   = translate_block(body_stmts, ctx);
+        return vec![Child::Node(Box::new(Node::new(&prod, vec![upper_child, body], 0)))];
+    }
+
+    // Non-unit step → emit: let mut var = 0; while var < upper { body; var += step; }
+    let step_val = step.unwrap_or(1) as usize;
+
+    // let mut var = 0usize
+    let let_prd = match find_prefix(ctx.grammar, &format!("StmtLetMut_{}_", var_name)) {
+        Some(p) => p.name.clone(), None => return vec![Child::Hole("Stmt".into())],
+    };
+    let zero = find_usize_lit(ctx.grammar, 0)
+        .map(|n| Child::Node(Box::new(Node::new(&n, vec![], 0))))
+        .unwrap_or(Child::Hole("Expr_usize".into()));
+    let let_init = Child::Node(Box::new(Node::new(&let_prd, vec![zero], 0)));
+
+    // while condition: var < upper
+    let local_idx = ctx.local_vars.iter().position(|(n, _)| n == var_name);
+    let var_child = match local_idx {
+        Some(i) => Child::Node(Box::new(Node::new(&format!("ExprIdent_local_{}", i), vec![], 0))),
+        None    => Child::Hole("Expr_usize".into()),
+    };
+    let cond = if ctx.grammar.values().flatten().any(|p| p.name == "ExprLt_usize") {
+        Child::Node(Box::new(Node::new("ExprLt_usize", vec![var_child, upper_child], 0)))
+    } else {
+        Child::Hole("Expr_bool".into())
+    };
+
+    // update statement: var += step_val
+    let step_prd = find_prefix(ctx.grammar, &format!("StmtCompoundPlus_{}_", var_name)).map(|p| p.name.clone());
+    let step_lit = find_usize_lit(ctx.grammar, step_val)
+        .map(|n| Child::Node(Box::new(Node::new(&n, vec![], 0))))
+        .unwrap_or(Child::Hole("Expr_usize".into()));
+    let update_child = match step_prd {
+        Some(prd) => Child::Node(Box::new(Node::new(&prd, vec![step_lit], 0))),
+        None      => Child::Hole("Stmt".into()),
+    };
+
+    // while body: original body stmts + update
+    let mut body_children: Vec<Child> = body_stmts.iter()
+        .flat_map(|s| translate_stmt(s, ctx))
+        .collect();
+    body_children.push(update_child);
+    let body_kind = match body_children.len() {
+        1 => "BlockSingle", 2 => "BlockSeq", 3 => "BlockSeq3", 4 => "BlockSeq4", 5 => "BlockSeq5",
+        _ => return vec![Child::Hole("Stmt".into())],
+    };
+    let body = Child::Node(Box::new(Node::new(body_kind, body_children, 0)));
+
+    let while_node = Child::Node(Box::new(Node::new("StmtWhile", vec![cond, body], 0)));
+    vec![let_init, while_node]
+}
+
+/// Returns the integer step of a C++ for-loop update, or None if unrecognised.
+/// `++` and `+= 1` both return Some(1).
+fn for_update_step(update: Option<&serde_json::Value>) -> Option<i64> {
+    let u = update?;
+    let op = u.get("op").and_then(|v| v.as_str())?;
+    match op {
+        "++" | "--" => Some(1),
+        "+=" | "-=" => {
+            u["args"].as_array()?.get(1)?.get("lit")?.as_str()?.parse::<i64>().ok()
+        }
+        _ => None,
+    }
 }
 
 fn translate_while(node: &serde_json::Value, ctx: &Ctx) -> Child {
