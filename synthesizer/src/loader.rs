@@ -380,6 +380,11 @@ fn visit_expr(node: &serde_json::Value, slices: &[&str], seq: &mut Vec<String>) 
                 if let Some(a) = args { for x in a { visit_expr(x, slices, seq); } }
             }
         }
+        "-" if arity == 1 => {
+            // Unary negation: -x → (0 - x) in Rust → hint is ExprSub
+            seq.push("ExprSub".into());
+            if let Some(a) = args { for x in a { visit_expr(x, slices, seq); } }
+        }
         "*" if arity == 1 => {
             // Pointer dereference → slice indexing in Rust
             seq.push("ExprIndex".into());
@@ -400,6 +405,13 @@ fn visit_expr(node: &serde_json::Value, slices: &[&str], seq: &mut Vec<String>) 
         ">=" => { seq.push("ExprGe".into()); if let Some(a) = args { for x in a { visit_expr(x, slices, seq); } } }
         "==" => { seq.push("ExprEq".into()); if let Some(a) = args { for x in a { visit_expr(x, slices, seq); } } }
         "!=" => { seq.push("ExprNe".into()); if let Some(a) = args { for x in a { visit_expr(x, slices, seq); } } }
+        "?:" => {
+            seq.push("ExprIfElse".into());
+            if let Some(a) = args {
+                // condition (arg 0), then-branch (arg 1), else-branch (arg 2)
+                for x in a { visit_expr(x, slices, seq); }
+            }
+        }
         _ => { if let Some(a) = args { for x in a { visit_expr(x, slices, seq); } } }
     }
 }

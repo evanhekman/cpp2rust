@@ -337,6 +337,20 @@ fn translate_expr(node: &serde_json::Value, expected_nt: &str, ctx: &Ctx) -> Chi
         "[]"             => translate_index(args, expected_nt, ctx),
         "+"  if arity>1  => translate_binop(args, "Add",  expected_nt, ctx),
         "-"  if arity==2 => translate_binop(args, "Sub",  expected_nt, ctx),
+        "-"  if arity==1 => {
+            // Unary negation: -x → (0 - x)
+            let zero = find_i32_lit(ctx.grammar, 0)
+                .map(|n| Child::Node(Box::new(Node::new(&n, vec![], 0))))
+                .unwrap_or(Child::Hole(expected_nt.into()));
+            let operand = args.and_then(|a| a.first())
+                .map(|e| translate_expr(e, expected_nt, ctx))
+                .unwrap_or(Child::Hole(expected_nt.into()));
+            if ctx.grammar.values().flatten().any(|p| p.name == "ExprSub") {
+                Child::Node(Box::new(Node::new("ExprSub", vec![zero, operand], 0)))
+            } else {
+                Child::Hole(expected_nt.into())
+            }
+        }
         "*"  if arity==2 => translate_binop(args, "Mul",  expected_nt, ctx),
         "/"              => translate_binop(args, "Div",  expected_nt, ctx),
         "%"              => translate_binop(args, "Mod",  expected_nt, ctx),
@@ -350,6 +364,7 @@ fn translate_expr(node: &serde_json::Value, expected_nt: &str, ctx: &Ctx) -> Chi
             }
         }
         "<" | ">" | "<=" | ">=" | "==" | "!=" => translate_cmp(args, op, ctx),
+        "?:" => translate_ternary(args, expected_nt, ctx),
         "&&" => two_bool("ExprAnd", args, ctx),
         "||" => two_bool("ExprOr",  args, ctx),
         "!"  => {
@@ -461,6 +476,18 @@ fn translate_binop(args: Option<&Vec<serde_json::Value>>, op: &str, expected_nt:
     let l = args.and_then(|a| a.first()).map(|e| translate_expr(e, expected_nt, ctx)).unwrap_or(Child::Hole(expected_nt.into()));
     let r = args.and_then(|a| a.get(1)).map(|e| translate_expr(e, expected_nt, ctx)).unwrap_or(Child::Hole(expected_nt.into()));
     Child::Node(Box::new(Node::new(&prd, vec![l, r], 0)))
+}
+
+fn translate_ternary(args: Option<&Vec<serde_json::Value>>, expected_nt: &str, ctx: &Ctx) -> Child {
+    let suffix = expected_nt.strip_prefix("Expr_").unwrap_or("i32");
+    let kind = format!("ExprIfElse_{}", suffix);
+    if !ctx.grammar.values().flatten().any(|p| p.name == kind) {
+        return Child::Hole(expected_nt.into());
+    }
+    let cond      = args.and_then(|a| a.first()).map(|e| translate_expr(e, "Expr_bool", ctx)).unwrap_or(Child::Hole("Expr_bool".into()));
+    let then_val  = args.and_then(|a| a.get(1)).map(|e| translate_expr(e, expected_nt, ctx)).unwrap_or(Child::Hole(expected_nt.into()));
+    let else_val  = args.and_then(|a| a.get(2)).map(|e| translate_expr(e, expected_nt, ctx)).unwrap_or(Child::Hole(expected_nt.into()));
+    Child::Node(Box::new(Node::new(&kind, vec![cond, then_val, else_val], 0)))
 }
 
 fn translate_cmp(args: Option<&Vec<serde_json::Value>>, op: &str, ctx: &Ctx) -> Child {
