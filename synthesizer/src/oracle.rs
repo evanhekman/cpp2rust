@@ -212,6 +212,7 @@ pub fn compile_oracle(
     let output = Command::new("g++")
         .args([
             "-O0",
+            "-fsanitize=address,undefined",
             "-o",
             binary_path.to_str().unwrap(),
             harness_path.to_str().unwrap(),
