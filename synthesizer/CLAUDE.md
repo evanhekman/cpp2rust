@@ -1,72 +1,40 @@
-### overview
-- these are guidelines for the synthesizer/ portion of the repo
-- the synthesizer works generally as follows:
-  - inputs: cpp/ files, prepost/ files, and processed/ files
-  - output: stitched/ files
-  - the cpp/ files are only used to generate test cases (by running the actual cpp)
-  - the prepost/ files are only used as a wrapper around the synthesized rust code
-  - the processed/ files should contain all critical information to guide heuristics
-- see root level README.md for general context about the repository
+# Synthesizer
 
-### guidelines
+Heuristic search over a Rust grammar. Takes `processed/` inputs, produces `stitched/` outputs.
+
+- `processed/` — simplified C++ AST + Rust function signature (from preprocessor)
+- `prepost/` — pre/post conditions used only as a wrapper around synthesized code
+- `cpp/` — original C++ used only to generate test cases
+
+For system-level context, see @../CLAUDE.md.
+
+## Rules
+
 - keep files below 800 lines
-- keep functions simple
-- functions should only do one thing
-- errors should never be swept under the rug
-- follow best design practices (as always)
-- never (ever) create markdown files. no, really, not ever.
-- perform git operations if and only if they are readonly. do not ever push or commit to git.
+- keep functions simple and single-purpose
+- never sweep errors under the rug
+- use `clippy` to lint rust files (`cargo clippy --fix --allow-dirty`)
+- if a command is run more than once, consider adding it to the justfile
+- readonly git operations *only*, never commit or push.
 
-### testing
-- prioritize quick tests that give immediate information over long tests that are more like black boxes
-- if failing on a long test, consider why:
-  - if the test exhausts all possible options before the time limit, *correct solution(s) are being pruned*
-  - if the test fails due to time limit, *correct solution(s) may be reachable, but the heuristics are too slow*
-  - if this ^ happens, instead of increasing the time limit, isolate the relevant portion of the test case and shrink it down to a new test case. then, try to meaningfully speed up that test case before returning to the main test case.
-- you should never need a timeout of more than 30 seconds
-- if you find yourself running a command more than once, consider whether it should be incorporated into the `justfile`
-- use `just synthesize <benchmark> [target]` to run synthesis; omitting target runs all. builds automatically.
+## Testing
 
-### interaction
-always alert the user when you
+- prefer quick, targeted tests over long black-box runs
+- timeout limit: 30 seconds MAX
+- `just synthesize <benchmark> [target]` — runs synthesis (builds automatically); omit target to run all
+- if a long test fails:
+  - exhausts options before time limit -> correct solutions are being pruned
+  - hits time limit -> heuristics are too slow; isolate the relevant subcase, shrink it, fix that first
+  - worklist cap exceeded -> might be evicting valid solutions 
+
+## Interaction
+
+Always alert the user when you:
 - create a new test case
 - find a key bug
-- find convincing results for the effectiveness/ineffectiveness of a heuristic
-- make changes to the `justfile`
-- if you need to do any of these things:
-  - create a python interpreter
-    - run a python script that is NOT via an established shebang
-  - cross-reference your results
-  - install a new dependency
-- just ask the user
+- find convincing results for heuristic effectiveness
+- make changes to the justfile
 
-### project structure
-cpp2rust
-- preprocessor/
-- synthesizer/
-  - src/
-    - *.rs
-    - CLAUDE.md (this)
-- validator/
-- data/
-  - benchmark0/
-    - cpp/
-    - prepost/
-    - processed/
-    - stitched/
-    - validated/
-  - synthesizer/
-    - b0/
-      - cpp/
-      - processed/
-    - b1/
-      - cpp/
-      - processed/
-- README.md
-- justfile
-- .gitignore
-
-### goals
-the synthesizer should be able to quickly synthesize solutions for data/benchmark0/. "quickly" is not strictly defined, but 5 minutes for each test case would be a suitable upper limit. the intermediate goal is to solve data/synthesizer/b0/ within 30s each, then data/synthesizer/b1/ with improved heuristics.
-- [ ] synthesizer/b0
-- [ ] synthesizer/b1
+Always ask the user to do these things manually:
+- run a Python script not via an established shebang
+- install a new dependency
