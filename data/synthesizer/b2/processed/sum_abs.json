@@ -1,0 +1,65 @@
+{
+  "name": "sum_abs",
+  "params": [
+    { "name": "a", "type": "&[i32]" }
+  ],
+  "return_type": "i32",
+  "test_cases": [
+    { "inputs": ["[1,-2,3,-4]"],  "expected_output": "10" },
+    { "inputs": ["[-3,-1,-2]"],   "expected_output": "6"  },
+    { "inputs": ["[5]"],          "expected_output": "5"  },
+    { "inputs": ["[0,-1,1]"],     "expected_output": "2"  }
+  ],
+  "ast": [
+    {
+      "op": "let",
+      "args": [ { "var": "s" }, { "lit": "0" } ]
+    },
+    {
+      "init": {
+        "op": "let",
+        "args": [ { "var": "i" }, { "lit": "0" } ]
+      },
+      "condition": {
+        "op": "<",
+        "args": [ { "var": "i" }, { "var": "n" } ]
+      },
+      "update": {
+        "op": "++",
+        "args": [ { "var": "i" } ]
+      },
+      "body": [
+        {
+          "op": "+=",
+          "args": [
+            { "var": "s" },
+            {
+              "op": "?:",
+              "args": [
+                {
+                  "op": ">=",
+                  "args": [
+                    { "op": "[]", "args": [ { "var": "a" }, { "var": "i" } ] },
+                    { "lit": "0" }
+                  ]
+                },
+                { "op": "[]", "args": [ { "var": "a" }, { "var": "i" } ] },
+                {
+                  "op": "-",
+                  "args": [
+                    { "lit": "0" },
+                    { "op": "[]", "args": [ { "var": "a" }, { "var": "i" } ] }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "op": "return",
+      "args": [ { "var": "s" } ]
+    }
+  ]
+}
