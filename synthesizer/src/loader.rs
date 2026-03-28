@@ -405,6 +405,10 @@ fn visit_expr(node: &serde_json::Value, slices: &[&str], seq: &mut Vec<String>) 
         ">=" => { seq.push("ExprGe".into()); if let Some(a) = args { for x in a { visit_expr(x, slices, seq); } } }
         "==" => { seq.push("ExprEq".into()); if let Some(a) = args { for x in a { visit_expr(x, slices, seq); } } }
         "!=" => { seq.push("ExprNe".into()); if let Some(a) = args { for x in a { visit_expr(x, slices, seq); } } }
+        "%"  => { seq.push("ExprMod".into()); if let Some(a) = args { for x in a { visit_expr(x, slices, seq); } } }
+        "&&" => { seq.push("ExprAnd".into()); if let Some(a) = args { for x in a { visit_expr(x, slices, seq); } } }
+        "||" => { seq.push("ExprOr".into());  if let Some(a) = args { for x in a { visit_expr(x, slices, seq); } } }
+        "!"  => { seq.push("ExprNot".into()); if let Some(a) = args { for x in a { visit_expr(x, slices, seq); } } }
         "?:" => {
             seq.push("ExprIfElse".into());
             if let Some(a) = args {
