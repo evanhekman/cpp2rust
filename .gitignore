@@ -4,5 +4,8 @@
 target
 
 verus
+verus-proof-synthesis
+intermediate*
+.venv
+
 !benchmark0/verus
-.env
