@@ -1,0 +1,46 @@
+{
+  "name": "sum_skip_first",
+  "params": [
+    { "name": "a", "type": "&[i32]" }
+  ],
+  "return_type": "i32",
+  "test_cases": [
+    { "inputs": ["[1,2,3,4,5]"], "expected_output": "14" },
+    { "inputs": ["[10,5,3]"],    "expected_output": "8"  },
+    { "inputs": ["[7]"],         "expected_output": "0"  },
+    { "inputs": ["[-1,3,-2]"],   "expected_output": "1"  }
+  ],
+  "ast": [
+    {
+      "op": "let",
+      "args": [ { "var": "s" }, { "lit": "0" } ]
+    },
+    {
+      "init": {
+        "op": "let",
+        "args": [ { "var": "i" }, { "lit": "1" } ]
+      },
+      "condition": {
+        "op": "<",
+        "args": [ { "var": "i" }, { "var": "n" } ]
+      },
+      "update": {
+        "op": "++",
+        "args": [ { "var": "i" } ]
+      },
+      "body": [
+        {
+          "op": "+=",
+          "args": [
+            { "var": "s" },
+            { "op": "[]", "args": [ { "var": "a" }, { "var": "i" } ] }
+          ]
+        }
+      ]
+    },
+    {
+      "op": "return",
+      "args": [ { "var": "s" } ]
+    }
+  ]
+}

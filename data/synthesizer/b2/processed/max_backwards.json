@@ -1,0 +1,63 @@
+{
+  "name": "max_backwards",
+  "params": [
+    { "name": "a", "type": "&[i32]" }
+  ],
+  "return_type": "i32",
+  "test_cases": [
+    { "inputs": ["[3,1,4,1,5]"], "expected_output": "5"  },
+    { "inputs": ["[-5,-2,-8]"],  "expected_output": "-2" },
+    { "inputs": ["[7]"],         "expected_output": "7"  },
+    { "inputs": ["[0,0,0,3]"],   "expected_output": "3"  }
+  ],
+  "ast": [
+    {
+      "op": "let",
+      "args": [
+        { "var": "m" },
+        { "op": "[]", "args": [ { "var": "a" }, { "lit": "0" } ] }
+      ]
+    },
+    {
+      "init": {
+        "op": "let",
+        "args": [
+          { "var": "i" },
+          { "op": "-", "args": [ { "var": "n" }, { "lit": "1" } ] }
+        ]
+      },
+      "condition": {
+        "op": ">=",
+        "args": [ { "var": "i" }, { "lit": "0" } ]
+      },
+      "update": {
+        "op": "--",
+        "args": [ { "var": "i" } ]
+      },
+      "body": [
+        {
+          "condition": {
+            "op": ">",
+            "args": [
+              { "op": "[]", "args": [ { "var": "a" }, { "var": "i" } ] },
+              { "var": "m" }
+            ]
+          },
+          "then": [
+            {
+              "op": "=",
+              "args": [
+                { "var": "m" },
+                { "op": "[]", "args": [ { "var": "a" }, { "var": "i" } ] }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "op": "return",
+      "args": [ { "var": "m" } ]
+    }
+  ]
+}

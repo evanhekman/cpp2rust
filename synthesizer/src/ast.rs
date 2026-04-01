@@ -58,16 +58,6 @@ impl Node {
         }
     }
 
-    pub fn child_at_path(&self, path: &[usize]) -> &Child {
-        let mut node = self;
-        for &idx in &path[..path.len() - 1] {
-            match &node.children[idx] {
-                Child::Node(n) => node = n,
-                Child::Hole(_) => panic!("hit hole before end"),
-            }
-        }
-        &node.children[*path.last().unwrap()]
-    }
 
     pub fn node_at_path(&self, path: &[usize]) -> &Node {
         if path.is_empty() {
@@ -81,6 +71,45 @@ impl Node {
             }
         }
         node
+    }
+
+    /// Compute a structural hash of this node tree (used for visited-set deduplication).
+    pub fn structural_hash(&self) -> u64 {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::Hasher;
+        let mut h = DefaultHasher::new();
+        self.hash_rec(&mut h);
+        h.finish()
+    }
+
+    fn hash_rec<H: std::hash::Hasher>(&self, h: &mut H) {
+        use std::hash::Hash;
+        self.kind.hash(h);
+        for child in &self.children {
+            match child {
+                Child::Hole(nt) => { 0u8.hash(h); nt.hash(h); }
+                Child::Node(n)  => { 1u8.hash(h); n.hash_rec(h); }
+            }
+        }
+    }
+
+    /// Replace the child at `path` with `Hole(nt)`, returning a new Node.
+    pub fn punch_hole_at_path(&self, path: &[usize], nt: String) -> Node {
+        assert!(!path.is_empty(), "cannot punch hole at root");
+        let i = path[0];
+        let mut new_children = self.children.clone();
+        if path.len() == 1 {
+            new_children[i] = Child::Hole(nt);
+        } else {
+            match &self.children[i] {
+                Child::Node(child) => {
+                    let new_child = child.punch_hole_at_path(&path[1..], nt);
+                    new_children[i] = Child::Node(Box::new(new_child));
+                }
+                Child::Hole(_) => panic!("punch_hole_at_path: hole mid-path"),
+            }
+        }
+        Node { kind: self.kind.clone(), children: new_children, depth: self.depth }
     }
 
     pub fn replace_at_path(&self, path: &[usize], replacement: Node) -> Node {

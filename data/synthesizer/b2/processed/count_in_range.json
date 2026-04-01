@@ -1,0 +1,68 @@
+{
+  "name": "count_in_range",
+  "params": [
+    { "name": "a",  "type": "&[i32]" },
+    { "name": "lo", "type": "i32"    },
+    { "name": "hi", "type": "i32"    }
+  ],
+  "return_type": "i32",
+  "test_cases": [
+    { "inputs": ["[1,2,3,4,5]",   "2",  "4"],  "expected_output": "3" },
+    { "inputs": ["[-2,-1,0,1,2]", "-1", "1"],  "expected_output": "3" },
+    { "inputs": ["[5,10,3,7]",    "4",  "8"],  "expected_output": "2" },
+    { "inputs": ["[1,2,3]",       "5",  "10"], "expected_output": "0" }
+  ],
+  "ast": [
+    {
+      "op": "let",
+      "args": [ { "var": "c" }, { "lit": "0" } ]
+    },
+    {
+      "init": {
+        "op": "let",
+        "args": [ { "var": "i" }, { "lit": "0" } ]
+      },
+      "condition": {
+        "op": "<",
+        "args": [ { "var": "i" }, { "var": "n" } ]
+      },
+      "update": {
+        "op": "++",
+        "args": [ { "var": "i" } ]
+      },
+      "body": [
+        {
+          "condition": {
+            "op": "&&",
+            "args": [
+              {
+                "op": ">=",
+                "args": [
+                  { "op": "[]", "args": [ { "var": "a" }, { "var": "i" } ] },
+                  { "var": "lo" }
+                ]
+              },
+              {
+                "op": "<=",
+                "args": [
+                  { "op": "[]", "args": [ { "var": "a" }, { "var": "i" } ] },
+                  { "var": "hi" }
+                ]
+              }
+            ]
+          },
+          "then": [
+            {
+              "op": "+=",
+              "args": [ { "var": "c" }, { "lit": "1" } ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "op": "return",
+      "args": [ { "var": "c" } ]
+    }
+  ]
+}

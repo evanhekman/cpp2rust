@@ -1,0 +1,49 @@
+{
+  "name": "sum_backwards",
+  "params": [
+    { "name": "a", "type": "&[i32]" }
+  ],
+  "return_type": "i32",
+  "test_cases": [
+    { "inputs": ["[1,2,3,4,5]"],  "expected_output": "15" },
+    { "inputs": ["[-1,3,-2,4]"],  "expected_output": "4"  },
+    { "inputs": ["[7]"],          "expected_output": "7"  },
+    { "inputs": ["[0,-5,5]"],     "expected_output": "0"  }
+  ],
+  "ast": [
+    {
+      "op": "let",
+      "args": [ { "var": "s" }, { "lit": "0" } ]
+    },
+    {
+      "init": {
+        "op": "let",
+        "args": [
+          { "var": "i" },
+          { "op": "-", "args": [ { "var": "n" }, { "lit": "1" } ] }
+        ]
+      },
+      "condition": {
+        "op": ">=",
+        "args": [ { "var": "i" }, { "lit": "0" } ]
+      },
+      "update": {
+        "op": "--",
+        "args": [ { "var": "i" } ]
+      },
+      "body": [
+        {
+          "op": "+=",
+          "args": [
+            { "var": "s" },
+            { "op": "[]", "args": [ { "var": "a" }, { "var": "i" } ] }
+          ]
+        }
+      ]
+    },
+    {
+      "op": "return",
+      "args": [ { "var": "s" } ]
+    }
+  ]
+}

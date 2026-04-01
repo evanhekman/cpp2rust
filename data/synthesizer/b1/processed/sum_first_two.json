@@ -1,0 +1,21 @@
+{
+  "name": "sum_first_two",
+  "params": [
+    { "name": "a", "type": "&[i32]" }
+  ],
+  "return_type": "i32",
+  "ast": [
+    {
+      "op": "return",
+      "args": [
+        {
+          "op": "+",
+          "args": [
+            { "op": "[]", "args": [ { "var": "a" }, { "lit": "0" } ] },
+            { "op": "[]", "args": [ { "var": "a" }, { "lit": "1" } ] }
+          ]
+        }
+      ]
+    }
+  ]
+}

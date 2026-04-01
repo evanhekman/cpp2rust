@@ -1,0 +1,15 @@
+{
+  "name": "max_two",
+  "params": [
+    { "name": "a", "type": "i32" },
+    { "name": "b", "type": "i32" }
+  ],
+  "return_type": "i32",
+  "ast": [
+    {
+      "condition": { "op": ">", "args": [ { "var": "a" }, { "var": "b" } ] },
+      "then": [ { "op": "return", "args": [ { "var": "a" } ] } ],
+      "else": [ { "op": "return", "args": [ { "var": "b" } ] } ]
+    }
+  ]
+}
