@@ -1,102 +1,146 @@
 {
+  "ast": [
+    {
+      "args": [
+        {
+          "ptr_associated_with_new_delete": false,
+          "ptr_null_compared_or_assigned": false,
+          "ptr_used_in_arithmetic": true,
+          "type": "&[i32]",
+          "var": "lo"
+        },
+        {
+          "var": "a"
+        }
+      ],
+      "op": "let"
+    },
+    {
+      "args": [
+        {
+          "ptr_associated_with_new_delete": false,
+          "ptr_null_compared_or_assigned": false,
+          "ptr_used_in_arithmetic": true,
+          "type": "&[i32]",
+          "var": "hi"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "n"
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "lit": "1"
+            }
+          ],
+          "op": "-"
+        }
+      ],
+      "op": "let"
+    },
+    {
+      "body": [
+        {
+          "args": [
+            {
+              "type": "i32",
+              "var": "tmp"
+            },
+            {
+              "args": [
+                {
+                  "var": "lo"
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "let"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "lo"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "args": [
+                {
+                  "var": "hi"
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "hi"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "var": "tmp"
+            }
+          ],
+          "op": "="
+        },
+        {
+          "args": [
+            {
+              "var": "lo"
+            }
+          ],
+          "op": "++"
+        },
+        {
+          "args": [
+            {
+              "var": "hi"
+            }
+          ],
+          "op": "--"
+        }
+      ],
+      "condition": {
+        "args": [
+          {
+            "var": "lo"
+          },
+          {
+            "var": "hi"
+          }
+        ],
+        "op": "<"
+      }
+    }
+  ],
   "name": "reverse",
   "params": [
     {
       "name": "a",
-      "type": "&mut [i32]"
+      "ptr_associated_with_new_delete": false,
+      "ptr_nullifiable": false,
+      "ptr_used_in_arithmetic": true,
+      "type": "&[i32]"
     }
   ],
-  "return_type": "()",
-  "ast": [
-    {
-      "op": "let",
-      "args": [
-        { "var": "lo" },
-        { "var": "a" }
-      ]
-    },
-    {
-      "op": "let",
-      "args": [
-        { "var": "hi" },
-        {
-          "op": "-",
-          "args": [
-            {
-              "op": "+",
-              "args": [
-                { "var": "a" },
-                { "var": "n" }
-              ]
-            },
-            { "lit": "1" }
-          ]
-        }
-      ]
-    },
-    {
-      "condition": {
-        "op": "<",
-        "args": [
-          { "var": "lo" },
-          { "var": "hi" }
-        ]
-      },
-      "body": [
-        {
-          "op": "let",
-          "args": [
-            { "var": "tmp" },
-            {
-              "op": "*",
-              "args": [
-                { "var": "lo" }
-              ]
-            }
-          ]
-        },
-        {
-          "op": "=",
-          "args": [
-            {
-              "op": "*",
-              "args": [
-                { "var": "lo" }
-              ]
-            },
-            {
-              "op": "*",
-              "args": [
-                { "var": "hi" }
-              ]
-            }
-          ]
-        },
-        {
-          "op": "=",
-          "args": [
-            {
-              "op": "*",
-              "args": [
-                { "var": "hi" }
-              ]
-            },
-            { "var": "tmp" }
-          ]
-        },
-        {
-          "op": "++",
-          "args": [
-            { "var": "lo" }
-          ]
-        },
-        {
-          "op": "--",
-          "args": [
-            { "var": "hi" }
-          ]
-        }
-      ]
-    }
-  ]
+  "return_type": null
 }

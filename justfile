@@ -5,10 +5,42 @@ synth  := root / "target/release/synth"
 bench  := root / "target/release/bench"
 data   := root / "data"
 symbols := root / "synthesizer/symbols.txt"
+cpp2json := root / "target/release/cpp2json_cpp"
+mapjson  := root / "target/release/map_cpp_json_to_rust_json"
 
-# build synthesizer binaries (incremental — fast if nothing changed)
+# build all binaries (incremental — fast if nothing changed)
 build:
     cargo build --release
+
+# preprocess C++ files into a benchmark's processed/ directory
+# just preprocess benchmark0                  → all targets
+# just preprocess benchmark0 dot_product      → one target
+preprocess BENCH FUNC="": build
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cpp_dir={{data}}/{{BENCH}}/cpp
+    _preprocess() {
+        local cpp_file="$1" func="$2"
+        local tmp; tmp=$(mktemp /tmp/${func}_cpp_XXXXXX)
+        trap "rm -f $tmp" EXIT
+        if ! {{cpp2json}} "$cpp_file" --out "$tmp" 2>&1; then
+            echo "skipping $func (preprocessor could not parse)"
+            return
+        fi
+        {{mapjson}} "$tmp" --out {{data}}/{{BENCH}}/processed/${func}.json
+    }
+    if [ -z "{{FUNC}}" ]; then
+        for cpp_file in "$cpp_dir"/*.cpp; do
+            _preprocess "$cpp_file" "$(basename "$cpp_file" .cpp)"
+        done
+    else
+        _preprocess "$cpp_dir/{{FUNC}}.cpp" "{{FUNC}}"
+    fi
+
+# full pipeline: preprocess then synthesize
+# just pipeline benchmark0                  → all targets
+# just pipeline benchmark0 dot_product      → one target
+pipeline BENCH FUNC="": (preprocess BENCH FUNC) (synthesize BENCH FUNC)
 
 # synthesize targets in a benchmark dataset
 # just synthesize synthesizer/b0                                       → all b0 targets

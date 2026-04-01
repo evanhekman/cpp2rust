@@ -1,78 +1,112 @@
 {
+  "ast": [
+    {
+      "args": [
+        {
+          "type": "i32",
+          "var": "sum"
+        },
+        {
+          "lit": "0"
+        }
+      ],
+      "op": "let"
+    },
+    {
+      "body": [
+        {
+          "args": [
+            {
+              "var": "sum"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "[]"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "b"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "[]"
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "+="
+        }
+      ],
+      "condition": {
+        "args": [
+          {
+            "var": "i"
+          },
+          {
+            "var": "n"
+          }
+        ],
+        "op": "<"
+      },
+      "init": {
+        "args": [
+          {
+            "type": "i32",
+            "var": "i"
+          },
+          {
+            "lit": "0"
+          }
+        ],
+        "op": "let"
+      },
+      "update": {
+        "args": [
+          {
+            "var": "i"
+          }
+        ],
+        "op": "++"
+      }
+    },
+    {
+      "args": [
+        {
+          "var": "sum"
+        }
+      ],
+      "op": "return"
+    }
+  ],
   "name": "dot",
   "params": [
     {
       "name": "a",
+      "ptr_associated_with_new_delete": false,
+      "ptr_nullifiable": false,
+      "ptr_used_in_arithmetic": true,
       "type": "&[u8]"
     },
     {
       "name": "b",
+      "ptr_associated_with_new_delete": false,
+      "ptr_nullifiable": false,
+      "ptr_used_in_arithmetic": true,
       "type": "&[u8]"
     }
   ],
-  "return_type": "u32",
-  "ast": [
-    {
-      "op": "let",
-      "args": [
-        { "var": "sum" },
-        { "lit": "0" }
-      ]
-    },
-    {
-      "init": {
-        "op": "let",
-        "args": [
-          { "var": "i" },
-          { "lit": "0" }
-        ]
-      },
-      "condition": {
-        "op": "<",
-        "args": [
-          { "var": "i" },
-          { "var": "n" }
-        ]
-      },
-      "update": {
-        "op": "++",
-        "args": [
-          { "var": "i" }
-        ]
-      },
-      "body": [
-        {
-          "op": "+=",
-          "args": [
-            { "var": "sum" },
-            {
-              "op": "*",
-              "args": [
-                {
-                  "op": "[]",
-                  "args": [
-                    { "var": "a" },
-                    { "var": "i" }
-                  ]
-                },
-                {
-                  "op": "[]",
-                  "args": [
-                    { "var": "b" },
-                    { "var": "i" }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "op": "return",
-      "args": [
-        { "var": "sum" }
-      ]
-    }
-  ]
+  "return_type": "i32"
 }

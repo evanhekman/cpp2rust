@@ -116,8 +116,9 @@ pub fn build_grammar(
         prod("ExprMod",  "Expr_i32", vec!["Expr_i32","Expr_i32"], "({0} % {1})"),
         prod("ExprIfElse_i32", "Expr_i32",
              vec!["Expr_bool","Expr_i32","Expr_i32"], "if {0} { {1} } else { {2} }"),
-        // cast from usize (e.g. return loop index as i32)
-        prod("ExprCast_i32", "Expr_i32", vec!["Expr_usize"], "({0} as i32)"),
+        // casts to i32
+        prod("ExprCast_i32",     "Expr_i32", vec!["Expr_usize"], "({0} as i32)"),
+        prod("ExprCast_i32_u8",  "Expr_i32", vec!["Expr_u8"],    "({0} as i32)"),
     ]);
 
     // ── Expr_usize ────────────────────────────────────────────────────────────

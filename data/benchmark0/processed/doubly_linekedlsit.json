@@ -1,0 +1,76 @@
+{
+  "ast": [
+    {
+      "args": [
+        {
+          "ptr_associated_with_new_delete": true,
+          "ptr_null_compared_or_assigned": false,
+          "ptr_used_in_arithmetic": true,
+          "type": "Box<Node>",
+          "var": "newNode"
+        },
+        {
+          "lit": "new Node{id}"
+        }
+      ],
+      "op": "let"
+    },
+    {
+      "condition": {
+        "args": [
+          {
+            "var": "head"
+          }
+        ],
+        "op": "!"
+      },
+      "else": [],
+      "then": [
+        {
+          "args": [
+            {
+              "var": "head"
+            },
+            {
+              "var": "newNode"
+            }
+          ],
+          "op": "="
+        },
+        {
+          "args": [
+            {
+              "lit": "head->next"
+            },
+            {
+              "var": "head"
+            }
+          ],
+          "op": "="
+        },
+        {
+          "args": [
+            {
+              "lit": "head->prev"
+            },
+            {
+              "var": "head"
+            }
+          ],
+          "op": "="
+        }
+      ]
+    },
+    {
+      "args": [
+        {
+          "var": "newNode"
+        }
+      ],
+      "op": "return"
+    }
+  ],
+  "name": "addTask",
+  "params": [],
+  "return_type": "Node"
+}
