@@ -195,6 +195,32 @@ fn stmt(n: Node<'_>, whole_src: &str, src: &[u8]) -> Option<Value> {
             }
             Some(Value::Object(obj))
         }
+        "throw_statement" => {
+            let arg = n.named_child(0).map(|a| expr(a, src))
+                .unwrap_or_else(|| json!({ "lit": "" }));
+            Some(json!({ "op": "throw", "args": [arg] }))
+        }
+        "try_statement" => {
+            let body = n.child_by_field_name("body")
+                .map(|b| block_to_vec(b, whole_src, src))
+                .unwrap_or_default();
+            let catch = n.children(&mut n.walk())
+                .find(|c| c.kind() == "catch_clause")
+                .map(|c| {
+                    let param = c.child_by_field_name("parameters")
+                        .and_then(|p| p.named_child(0))
+                        .and_then(|p| p.child_by_field_name("declarator")
+                            .or_else(|| p.named_child(0)))
+                        .map(|p| json!({ "var": text(p, src) }))
+                        .unwrap_or(Value::Null);
+                    let catch_body = c.child_by_field_name("body")
+                        .map(|b| block_to_vec(b, whole_src, src))
+                        .unwrap_or_default();
+                    json!({ "param": param, "body": catch_body })
+                })
+                .unwrap_or(Value::Null);
+            Some(json!({ "body": body, "catch": catch }))
+        }
         "break_statement" => Some(json!({ "op": "break", "args": [] })),
         "continue_statement" => Some(json!({ "op": "continue", "args": [] })),
         _ => None,

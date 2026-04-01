@@ -1,5 +1,99 @@
 {
-  "ast": [],
+  "ast": [
+    {
+      "body": [
+        {
+          "body": [
+            {
+              "condition": {
+                "args": [
+                  {
+                    "args": [
+                      {
+                        "var": "v"
+                      },
+                      {
+                        "var": "i"
+                      }
+                    ],
+                    "op": "[]"
+                  },
+                  {
+                    "lit": "0"
+                  }
+                ],
+                "op": "<"
+              },
+              "then": [
+                {
+                  "args": [
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "throw"
+                }
+              ]
+            }
+          ],
+          "condition": {
+            "args": [
+              {
+                "var": "i"
+              },
+              {
+                "var": "n"
+              }
+            ],
+            "op": "<"
+          },
+          "init": {
+            "args": [
+              {
+                "type": "i32",
+                "var": "i"
+              },
+              {
+                "lit": "0"
+              }
+            ],
+            "op": "let"
+          },
+          "update": {
+            "args": [
+              {
+                "var": "i"
+              }
+            ],
+            "op": "++"
+          }
+        },
+        {
+          "args": [
+            {
+              "lit": "-1"
+            }
+          ],
+          "op": "return"
+        }
+      ],
+      "catch": {
+        "body": [
+          {
+            "args": [
+              {
+                "var": "i"
+              }
+            ],
+            "op": "return"
+          }
+        ],
+        "param": {
+          "var": "i"
+        }
+      }
+    }
+  ],
   "name": "first_negative",
   "params": [
     {

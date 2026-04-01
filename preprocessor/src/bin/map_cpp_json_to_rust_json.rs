@@ -97,10 +97,10 @@ fn map_types_in_place(doc: &mut Value) {
 
     if let Some(ret) = doc.get_mut("return_type") {
         match ret {
-            Value::Null => {}
+            Value::Null => { *ret = Value::String("()".into()); }
             Value::String(s) => {
                 if s.trim() == "void" {
-                    *ret = Value::Null;
+                    *ret = Value::String("()".into());
                 } else {
                     let mapped = if s.contains('*') {
                         map_cpp_pointer_type_to_rust(s, false, false)
