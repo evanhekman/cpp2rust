@@ -1,5 +1,7 @@
 root := justfile_directory()
 python := root / ".venv/bin/python"
+# TEMP: targets excluded from preprocess and synthesize until preprocessor supports them
+skip_targets := "graphs doubly_linekedlsit shared_mutable_aliasing"
 autoverus := root / "verus-proof-synthesis/autoverus"
 synth  := root / "target/release/synth"
 bench  := root / "target/release/bench"
@@ -29,9 +31,12 @@ preprocess BENCH FUNC="": build
         fi
         {{mapjson}} "$tmp" --out {{data}}/{{BENCH}}/processed/${func}.json
     }
+    _skip() { for s in {{skip_targets}}; do [ "$1" = "$s" ] && return 0; done; return 1; }
     if [ -z "{{FUNC}}" ]; then
         for cpp_file in "$cpp_dir"/*.cpp; do
-            _preprocess "$cpp_file" "$(basename "$cpp_file" .cpp)"
+            func="$(basename "$cpp_file" .cpp)"
+            if _skip "$func"; then echo "skipping $func (excluded)"; continue; fi
+            _preprocess "$cpp_file" "$func"
         done
     else
         _preprocess "$cpp_dir/{{FUNC}}.cpp" "{{FUNC}}"
@@ -56,8 +61,14 @@ synthesize BENCH TARGET="" DISABLE="": build
     for h in {{DISABLE}}; do
         disable_flags="$disable_flags --disable-heuristic $h"
     done
+    _skip() { for s in {{skip_targets}}; do [ "$1" = "$s" ] && return 0; done; return 1; }
     if [ -z "{{TARGET}}" ]; then
-        {{bench}} --dataset "$dataset" --symbols {{symbols}} $disable_flags
+        targets=""
+        for json in "$dataset"/*.json; do
+            t="$(basename "$json" .json)"
+            _skip "$t" || targets="$targets $t"
+        done
+        {{bench}} --dataset "$dataset" --symbols {{symbols}} --targets $targets $disable_flags
     else
         {{synth}} --file "$dataset/{{TARGET}}.json" --symbols {{symbols}} $disable_flags
     fi
