@@ -42,10 +42,35 @@ preprocess BENCH FUNC="": build
         _preprocess "$cpp_dir/{{FUNC}}.cpp" "{{FUNC}}"
     fi
 
-# full pipeline: preprocess then synthesize
+# full pipeline: preprocess, synthesize, then validate
 # just pipeline benchmark0                  → all targets
 # just pipeline benchmark0 dot_product      → one target
-pipeline BENCH FUNC="": (preprocess BENCH FUNC) (synthesize BENCH FUNC)
+pipeline BENCH FUNC="": (preprocess BENCH FUNC) (synthesize BENCH FUNC) (validate BENCH FUNC)
+
+# validate stitched rust files using autoverus
+# just validate benchmark0                  → all targets
+# just validate benchmark0 dot_product      → one target
+validate BENCH FUNC="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    stitched_dir={{data}}/{{BENCH}}/stitched
+    validated_dir={{data}}/{{BENCH}}/validated
+    mkdir -p "$validated_dir"
+    _validate() {
+        local rs_file="$1" func="$2"
+        echo "validating $func..."
+        {{python}} {{root}}/validator/validate.py \
+            --input "$rs_file" \
+            --output "$validated_dir/${func}.rs"
+    }
+    if [ -z "{{FUNC}}" ]; then
+        for rs_file in "$stitched_dir"/*.rs; do
+            func="$(basename "$rs_file" .rs)"
+            _validate "$rs_file" "$func"
+        done
+    else
+        _validate "$stitched_dir/{{FUNC}}.rs" "{{FUNC}}"
+    fi
 
 # synthesize targets in a benchmark dataset
 # just synthesize synthesizer/b0                                       → all b0 targets

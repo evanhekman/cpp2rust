@@ -2,6 +2,7 @@
 .ruff_cache
 .env
 target
+target-local
 
 verus
 verus-repo

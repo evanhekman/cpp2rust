@@ -2,6 +2,5 @@
 members = [
     "preprocessor",
     "synthesizer",
-    "validator",
 ]
 resolver = "2"

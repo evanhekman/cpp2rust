@@ -408,10 +408,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "transform_verus"
-version = "0.1.0"
-
-[[package]]
 name = "tree-sitter"
 version = "0.26.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
