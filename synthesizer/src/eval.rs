@@ -239,6 +239,10 @@ pub fn eval(node: &Node, env: &Env, grammar: &Grammar) -> Result<Value, EvalErro
             let v = eval_child(node, 0, env, grammar)?.as_usize()?;
             Ok(Value::Int(v as i32))
         }
+        "ExprCast_i32_u8" => {
+            let v = eval_child(node, 0, env, grammar)?.as_u8()?;
+            Ok(Value::Int(v as i32))
+        }
         "ExprCast_u32_u8" => {
             let v = eval_child(node, 0, env, grammar)?.as_u8()?;
             Ok(Value::U32(v as u32))

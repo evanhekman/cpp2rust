@@ -1,80 +1,14 @@
 {
+  "ast": [],
   "name": "first_negative",
   "params": [
     {
       "name": "v",
+      "ptr_associated_with_new_delete": false,
+      "ptr_nullifiable": false,
+      "ptr_used_in_arithmetic": true,
       "type": "&[i32]"
     }
   ],
-  "return_type": "i32",
-  "ast": [
-    {
-      "body": [
-        {
-          "init": {
-            "op": "let",
-            "args": [
-              { "var": "i" },
-              { "lit": "0" }
-            ]
-          },
-          "condition": {
-            "op": "<",
-            "args": [
-              { "var": "i" },
-              { "var": "n" }
-            ]
-          },
-          "update": {
-            "op": "++",
-            "args": [
-              { "var": "i" }
-            ]
-          },
-          "body": [
-            {
-              "condition": {
-                "op": "<",
-                "args": [
-                  {
-                    "op": "[]",
-                    "args": [
-                      { "var": "v" },
-                      { "var": "i" }
-                    ]
-                  },
-                  { "lit": "0" }
-                ]
-              },
-              "then": [
-                {
-                  "op": "throw",
-                  "args": [
-                    { "var": "i" }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "op": "return",
-          "args": [
-            { "lit": "-1" }
-          ]
-        }
-      ],
-      "catch": {
-        "param": { "var": "i" },
-        "body": [
-          {
-            "op": "return",
-            "args": [
-              { "var": "i" }
-            ]
-          }
-        ]
-      }
-    }
-  ]
+  "return_type": "i32"
 }

@@ -1,96 +1,136 @@
 {
+  "ast": [
+    {
+      "args": [
+        {
+          "type": "i32",
+          "var": "m"
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "lit": "0"
+            }
+          ],
+          "op": "[]"
+        }
+      ],
+      "op": "let"
+    },
+    {
+      "body": [
+        {
+          "condition": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "p"
+                  }
+                ],
+                "op": "*"
+              },
+              {
+                "var": "m"
+              }
+            ],
+            "op": ">"
+          },
+          "then": [
+            {
+              "args": [
+                {
+                  "var": "m"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "p"
+                    }
+                  ],
+                  "op": "*"
+                }
+              ],
+              "op": "="
+            }
+          ]
+        }
+      ],
+      "condition": {
+        "args": [
+          {
+            "var": "p"
+          },
+          {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "var": "n"
+              }
+            ],
+            "op": "+"
+          }
+        ],
+        "op": "<"
+      },
+      "init": {
+        "args": [
+          {
+            "ptr_associated_with_new_delete": false,
+            "ptr_null_compared_or_assigned": false,
+            "ptr_used_in_arithmetic": true,
+            "type": "&[i32]",
+            "var": "p"
+          },
+          {
+            "args": [
+              {
+                "var": "a"
+              },
+              {
+                "lit": "2"
+              }
+            ],
+            "op": "+"
+          }
+        ],
+        "op": "let"
+      },
+      "update": {
+        "args": [
+          {
+            "var": "p"
+          },
+          {
+            "lit": "2"
+          }
+        ],
+        "op": "+="
+      }
+    },
+    {
+      "args": [
+        {
+          "var": "m"
+        }
+      ],
+      "op": "return"
+    }
+  ],
   "name": "max_even_indexed",
   "params": [
     {
       "name": "a",
+      "ptr_associated_with_new_delete": false,
+      "ptr_nullifiable": false,
+      "ptr_used_in_arithmetic": true,
       "type": "&[i32]"
     }
   ],
-  "return_type": "i32",
-  "ast": [
-    {
-      "op": "let",
-      "args": [
-        { "var": "m" },
-        {
-          "op": "[]",
-          "args": [
-            { "var": "a" },
-            { "lit": "0" }
-          ]
-        }
-      ]
-    },
-    {
-      "init": {
-        "op": "let",
-        "args": [
-          { "var": "p" },
-          {
-            "op": "+",
-            "args": [
-              { "var": "a" },
-              { "lit": "2" }
-            ]
-          }
-        ]
-      },
-      "condition": {
-        "op": "<",
-        "args": [
-          { "var": "p" },
-          {
-            "op": "+",
-            "args": [
-              { "var": "a" },
-              { "var": "n" }
-            ]
-          }
-        ]
-      },
-      "update": {
-        "op": "+=",
-        "args": [
-          { "var": "p" },
-          { "lit": "2" }
-        ]
-      },
-      "body": [
-        {
-          "condition": {
-            "op": ">",
-            "args": [
-              {
-                "op": "*",
-                "args": [
-                  { "var": "p" }
-                ]
-              },
-              { "var": "m" }
-            ]
-          },
-          "then": [
-            {
-              "op": "=",
-              "args": [
-                { "var": "m" },
-                {
-                  "op": "*",
-                  "args": [
-                    { "var": "p" }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "op": "return",
-      "args": [
-        { "var": "m" }
-      ]
-    }
-  ]
+  "return_type": "i32"
 }

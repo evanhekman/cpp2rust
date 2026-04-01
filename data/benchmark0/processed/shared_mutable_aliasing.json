@@ -1,0 +1,38 @@
+{
+  "ast": [
+    {
+      "args": [
+        {
+          "var": "a"
+        },
+        {
+          "lit": "1"
+        }
+      ],
+      "op": "+="
+    },
+    {
+      "args": [
+        {
+          "var": "b"
+        },
+        {
+          "lit": "1"
+        }
+      ],
+      "op": "+="
+    }
+  ],
+  "name": "add_both",
+  "params": [
+    {
+      "name": "a",
+      "type": "i32"
+    },
+    {
+      "name": "b",
+      "type": "i32"
+    }
+  ],
+  "return_type": null
+}
