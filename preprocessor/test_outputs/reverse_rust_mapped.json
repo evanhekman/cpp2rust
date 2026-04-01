@@ -1,0 +1,143 @@
+{
+  "ast": [
+    {
+      "args": [
+        {
+          "ptr_associated_with_new_delete": false,
+          "ptr_null_compared_or_assigned": false,
+          "ptr_used_in_arithmetic": true,
+          "var": "lo"
+        },
+        {
+          "var": "a"
+        }
+      ],
+      "op": "let"
+    },
+    {
+      "args": [
+        {
+          "ptr_associated_with_new_delete": false,
+          "ptr_null_compared_or_assigned": false,
+          "ptr_used_in_arithmetic": true,
+          "var": "hi"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "n"
+                }
+              ],
+              "op": "+"
+            },
+            {
+              "lit": "1"
+            }
+          ],
+          "op": "-"
+        }
+      ],
+      "op": "let"
+    },
+    {
+      "body": [
+        {
+          "args": [
+            {
+              "var": "tmp"
+            },
+            {
+              "args": [
+                {
+                  "var": "lo"
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "let"
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "lo"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "args": [
+                {
+                  "var": "hi"
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "="
+        },
+        {
+          "args": [
+            {
+              "args": [
+                {
+                  "var": "hi"
+                }
+              ],
+              "op": "*"
+            },
+            {
+              "var": "tmp"
+            }
+          ],
+          "op": "="
+        },
+        {
+          "args": [
+            {
+              "var": "lo"
+            }
+          ],
+          "op": "++"
+        },
+        {
+          "args": [
+            {
+              "var": "hi"
+            }
+          ],
+          "op": "--"
+        }
+      ],
+      "condition": {
+        "args": [
+          {
+            "var": "lo"
+          },
+          {
+            "var": "hi"
+          }
+        ],
+        "op": "<"
+      }
+    }
+  ],
+  "name": "reverse",
+  "params": [
+    {
+      "name": "a",
+      "ptr_associated_with_new_delete": false,
+      "ptr_nullifiable": false,
+      "ptr_used_in_arithmetic": true,
+      "type": "&[i32]"
+    }
+  ],
+  "return_type": null
+}

@@ -52,6 +52,7 @@ fn map_types_in_place(doc: &mut Value) {
             let ty = p.get("type").and_then(Value::as_str).unwrap_or("").to_string();
             let ptr_nullifiable = p
                 .get("ptr_nullifiable")
+                .or_else(|| p.get("ptr_null_compared_or_assigned"))
                 .and_then(Value::as_bool)
                 .unwrap_or(false);
             let ptr_used_in_arithmetic = p
@@ -65,8 +66,22 @@ fn map_types_in_place(doc: &mut Value) {
             if ty.is_empty() {
                 continue;
             }
-            let mapped = map_cpp_type_to_rust(&ty);
-            if ty.contains('*') {
+            let is_ptr = ty.contains('*');
+            let mapped = if is_ptr {
+                map_cpp_pointer_type_to_rust(
+                    &ty,
+                    ptr_used_in_arithmetic,
+                    ptr_associated_with_new_delete,
+                )
+            } else {
+                map_cpp_type_to_rust(&ty)
+            };
+            let mapped = if is_ptr && ptr_nullifiable {
+                format!("Option<{mapped}>")
+            } else {
+                mapped
+            };
+            if is_ptr {
                 *p = json!({
                     "name": name,
                     "type": mapped,
@@ -87,12 +102,91 @@ fn map_types_in_place(doc: &mut Value) {
                 if s.trim() == "void" {
                     *ret = Value::Null;
                 } else {
-                    *ret = Value::String(map_cpp_type_to_rust(s));
+                    let mapped = if s.contains('*') {
+                        map_cpp_pointer_type_to_rust(s, false, false)
+                    } else {
+                        map_cpp_type_to_rust(s)
+                    };
+                    *ret = Value::String(mapped);
                 }
             }
             _ => {}
         }
     }
+
+    if let Some(ast) = doc.get_mut("ast") {
+        map_types_in_value(ast);
+    }
+}
+
+fn map_types_in_value(v: &mut Value) {
+    match v {
+        Value::Array(items) => {
+            for item in items {
+                map_types_in_value(item);
+            }
+        }
+        Value::Object(obj) => {
+            if let Some(ty) = obj.get("type").and_then(Value::as_str) {
+                if !is_probably_rust_type(ty) {
+                    let ptr_nullifiable = obj
+                        .get("ptr_nullifiable")
+                        .or_else(|| obj.get("ptr_null_compared_or_assigned"))
+                        .and_then(Value::as_bool)
+                        .unwrap_or(false);
+                    let ptr_used_in_arithmetic = obj
+                        .get("ptr_used_in_arithmetic")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(false);
+                    let ptr_associated_with_new_delete = obj
+                        .get("ptr_associated_with_new_delete")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(false);
+                    let is_ptr = ty.contains('*');
+                    let mapped = if is_ptr {
+                        map_cpp_pointer_type_to_rust(
+                            ty,
+                            ptr_used_in_arithmetic,
+                            ptr_associated_with_new_delete,
+                        )
+                    } else {
+                        map_cpp_type_to_rust(ty)
+                    };
+                    let mapped = if is_ptr && ptr_nullifiable {
+                        format!("Option<{mapped}>")
+                    } else {
+                        mapped
+                    };
+                    obj.insert("type".to_string(), Value::String(mapped));
+                }
+            }
+            for value in obj.values_mut() {
+                map_types_in_value(value);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn is_probably_rust_type(ty: &str) -> bool {
+    if ty.contains('&') || ty.starts_with("Box<") || ty.starts_with("Option<") {
+        return true;
+    }
+    matches!(
+        ty,
+        "bool"
+            | "u8"
+            | "i8"
+            | "u16"
+            | "i16"
+            | "u32"
+            | "i32"
+            | "u64"
+            | "i64"
+            | "usize"
+            | "f32"
+            | "f64"
+    )
 }
 
 fn drop_len_param_for_slice_style(doc: &mut Value) {
@@ -118,29 +212,43 @@ fn drop_len_param_for_slice_style(doc: &mut Value) {
 }
 
 fn map_cpp_type_to_rust(cpp_type: &str) -> String {
+    let t = normalize_cpp_type(cpp_type);
+    map_cpp_base_type_to_rust(&t)
+}
+
+fn map_cpp_pointer_type_to_rust(
+    cpp_type: &str,
+    ptr_used_in_arithmetic: bool,
+    ptr_associated_with_new_delete: bool,
+) -> String {
+    let t = normalize_cpp_type(cpp_type);
+    let base_cpp = strip_pointer_suffix(&t);
+    let base = map_cpp_base_type_to_rust(base_cpp);
+    if ptr_associated_with_new_delete {
+        format!("Box<{base}>")
+    } else if ptr_used_in_arithmetic {
+        format!("&[{base}]")
+    } else {
+        format!("&{base}")
+    }
+}
+
+fn normalize_cpp_type(cpp_type: &str) -> String {
     let mut t = cpp_type.replace("const", "");
     t = t.split_whitespace().collect::<Vec<_>>().join(" ");
-    let t = t.trim().to_string();
+    t.trim().to_string()
+}
 
-    // Pointer-like: convert to slices by element type.
-    if t.ends_with('*') {
-        let base = t.trim_end_matches('*').trim();
-        return match base {
-            "uint8_t" | "unsigned char" => "&[u8]".to_string(),
-            "int8_t" | "char" | "signed char" => "&[i8]".to_string(),
-            "uint16_t" | "unsigned short" => "&[u16]".to_string(),
-            "int16_t" | "short" => "&[i16]".to_string(),
-            "uint32_t" | "unsigned int" => "&[u32]".to_string(),
-            "int32_t" | "int" => "&[i32]".to_string(),
-            "uint64_t" | "unsigned long long" => "&[u64]".to_string(),
-            "int64_t" | "long long" => "&[i64]".to_string(),
-            "float" => "&[f32]".to_string(),
-            "double" => "&[f64]".to_string(),
-            other => format!("&[{other}]"),
-        };
+fn strip_pointer_suffix(ty: &str) -> &str {
+    let mut out = ty.trim_end();
+    while out.ends_with('*') {
+        out = out.trim_end_matches('*').trim_end();
     }
+    out.trim()
+}
 
-    match t.as_str() {
+fn map_cpp_base_type_to_rust(t: &str) -> String {
+    match t {
         "bool" => "bool".to_string(),
         "uint8_t" | "unsigned char" => "u8".to_string(),
         "int8_t" | "char" | "signed char" => "i8".to_string(),
