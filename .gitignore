@@ -1,7 +1,7 @@
 .claude
 .ruff_cache
+.env
 .venv
-
 target
 verus
 verus-repo

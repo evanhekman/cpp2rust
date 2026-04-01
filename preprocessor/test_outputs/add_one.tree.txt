@@ -1,0 +1,4 @@
+// parsed: test_inputs/add_one.cpp
+// root_has_error: false
+
+(translation_unit (function_definition type: (primitive_type) declarator: (function_declarator declarator: (identifier) parameters: (parameter_list (parameter_declaration type: (primitive_type) declarator: (identifier)))) body: (compound_statement (return_statement (binary_expression left: (identifier) right: (number_literal))))))

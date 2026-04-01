@@ -1,0 +1,4 @@
+// parsed: test_inputs/hello_main.cpp
+// root_has_error: false
+
+(translation_unit (preproc_include path: (system_lib_string)) (function_definition type: (primitive_type) declarator: (function_declarator declarator: (identifier) parameters: (parameter_list)) body: (compound_statement (expression_statement (binary_expression left: (qualified_identifier scope: (namespace_identifier) name: (identifier)) right: (string_literal (string_content) (escape_sequence)))) (return_statement (number_literal)))))

@@ -1,0 +1,108 @@
+{
+  "ast": [
+    {
+      "args": [
+        {
+          "var": "sum"
+        },
+        {
+          "lit": "0"
+        }
+      ],
+      "op": "let"
+    },
+    {
+      "body": [
+        {
+          "args": [
+            {
+              "var": "sum"
+            },
+            {
+              "args": [
+                {
+                  "args": [
+                    {
+                      "var": "a"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "[]"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "b"
+                    },
+                    {
+                      "var": "i"
+                    }
+                  ],
+                  "op": "[]"
+                }
+              ],
+              "op": "*"
+            }
+          ],
+          "op": "+="
+        }
+      ],
+      "condition": {
+        "args": [
+          {
+            "var": "i"
+          },
+          {
+            "var": "n"
+          }
+        ],
+        "op": "<"
+      },
+      "init": {
+        "args": [
+          {
+            "var": "i"
+          },
+          {
+            "lit": "0"
+          }
+        ],
+        "op": "let"
+      },
+      "update": {
+        "args": [
+          {
+            "var": "i"
+          }
+        ],
+        "op": "++"
+      }
+    },
+    {
+      "args": [
+        {
+          "var": "sum"
+        }
+      ],
+      "op": "return"
+    }
+  ],
+  "name": "dot",
+  "params": [
+    {
+      "name": "a",
+      "ptr_nullifiable": false,
+      "ptr_used_in_arithmetic": true,
+      "type": "&[u8]"
+    },
+    {
+      "name": "b",
+      "ptr_nullifiable": false,
+      "ptr_used_in_arithmetic": true,
+      "type": "&[u8]"
+    }
+  ],
+  "return_type": "i32"
+}

@@ -1,0 +1,408 @@
+{
+  "files": [
+    {
+      "path": "/Users/austinshen/Documents/Umich/2026Winter/EECS498_programSynthesis/cpp2rust/preprocessor/test_inputs/add_one.cpp",
+      "root_has_error": false,
+      "extracted": {
+        "variables": [
+          {
+            "name": "x",
+            "type_spelling": "int",
+            "role": "parameter",
+            "nullability_note": null
+          }
+        ],
+        "functions": [
+          {
+            "name": "add_one",
+            "return_type": "int",
+            "parameters": [
+              [
+                "int",
+                "x"
+              ]
+            ],
+            "is_definition": true
+          }
+        ],
+        "operators": [
+          {
+            "spelling": "+",
+            "kind": "binary"
+          }
+        ],
+        "literals": [
+          "1"
+        ],
+        "control_flow": [
+          {
+            "kind": "return",
+            "node_kind": "return_statement",
+            "header": ""
+          }
+        ]
+      }
+    },
+    {
+      "path": "/Users/austinshen/Documents/Umich/2026Winter/EECS498_programSynthesis/cpp2rust/preprocessor/test_inputs/literals.cpp",
+      "root_has_error": false,
+      "extracted": {
+        "variables": [
+          {
+            "name": "x",
+            "type_spelling": "int",
+            "role": "global",
+            "nullability_note": null
+          },
+          {
+            "name": "pi",
+            "type_spelling": "double",
+            "role": "global",
+            "nullability_note": null
+          },
+          {
+            "name": "s",
+            "type_spelling": "char",
+            "role": "global",
+            "nullability_note": null
+          }
+        ],
+        "functions": [],
+        "operators": [],
+        "literals": [
+          "42",
+          "3.14",
+          "\"ok\""
+        ],
+        "control_flow": []
+      }
+    },
+    {
+      "path": "/Users/austinshen/Documents/Umich/2026Winter/EECS498_programSynthesis/cpp2rust/preprocessor/test_inputs/hello_main.cpp",
+      "root_has_error": false,
+      "extracted": {
+        "variables": [],
+        "functions": [
+          {
+            "name": "main",
+            "return_type": "int",
+            "parameters": [],
+            "is_definition": true
+          }
+        ],
+        "operators": [
+          {
+            "spelling": "<<",
+            "kind": "binary"
+          }
+        ],
+        "literals": [
+          "\"hello\\n\"",
+          "0"
+        ],
+        "control_flow": [
+          {
+            "kind": "return",
+            "node_kind": "return_statement",
+            "header": ""
+          }
+        ]
+      }
+    },
+    {
+      "path": "/Users/austinshen/Documents/Umich/2026Winter/EECS498_programSynthesis/cpp2rust/preprocessor/test_inputs/minimal_class.cpp",
+      "root_has_error": false,
+      "extracted": {
+        "variables": [
+          {
+            "name": "x",
+            "type_spelling": "int",
+            "role": "field",
+            "nullability_note": null
+          },
+          {
+            "name": "y",
+            "type_spelling": "int",
+            "role": "field",
+            "nullability_note": null
+          },
+          {
+            "name": "p",
+            "type_spelling": "Point",
+            "role": "parameter",
+            "nullability_note": null
+          }
+        ],
+        "functions": [
+          {
+            "name": "sum",
+            "return_type": "int",
+            "parameters": [
+              [
+                "Point",
+                "p"
+              ]
+            ],
+            "is_definition": true
+          }
+        ],
+        "operators": [
+          {
+            "spelling": "+",
+            "kind": "binary"
+          }
+        ],
+        "literals": [],
+        "control_flow": [
+          {
+            "kind": "return",
+            "node_kind": "return_statement",
+            "header": ""
+          }
+        ]
+      }
+    },
+    {
+      "path": "/Users/austinshen/Documents/Umich/2026Winter/EECS498_programSynthesis/cpp2rust/preprocessor/test_inputs/control_flow.cpp",
+      "root_has_error": false,
+      "extracted": {
+        "variables": [
+          {
+            "name": "x",
+            "type_spelling": "int",
+            "role": "parameter",
+            "nullability_note": null
+          },
+          {
+            "name": "y",
+            "type_spelling": "int",
+            "role": "local",
+            "nullability_note": null
+          },
+          {
+            "name": "i",
+            "type_spelling": "int",
+            "role": "local",
+            "nullability_note": null
+          },
+          {
+            "name": "j",
+            "type_spelling": "int",
+            "role": "local",
+            "nullability_note": null
+          }
+        ],
+        "functions": [
+          {
+            "name": "control_flow",
+            "return_type": "int",
+            "parameters": [
+              [
+                "int",
+                "x"
+              ]
+            ],
+            "is_definition": true
+          }
+        ],
+        "operators": [
+          {
+            "spelling": "<",
+            "kind": "binary"
+          },
+          {
+            "spelling": "-",
+            "kind": "unary"
+          },
+          {
+            "spelling": "==",
+            "kind": "binary"
+          },
+          {
+            "spelling": "<",
+            "kind": "binary"
+          },
+          {
+            "spelling": "++",
+            "kind": "update"
+          },
+          {
+            "spelling": "+",
+            "kind": "binary"
+          },
+          {
+            "spelling": "<",
+            "kind": "binary"
+          },
+          {
+            "spelling": "++",
+            "kind": "update"
+          },
+          {
+            "spelling": "==",
+            "kind": "binary"
+          }
+        ],
+        "literals": [
+          "0",
+          "0",
+          "0",
+          "10",
+          "0",
+          "3",
+          "0",
+          "2",
+          "1",
+          "1",
+          "111",
+          "222"
+        ],
+        "control_flow": [
+          {
+            "kind": "if",
+            "node_kind": "if_statement",
+            "header": "(x < 0)"
+          },
+          {
+            "kind": "else",
+            "node_kind": "else_clause",
+            "header": ""
+          },
+          {
+            "kind": "if",
+            "node_kind": "if_statement",
+            "header": "(x == 0)"
+          },
+          {
+            "kind": "else",
+            "node_kind": "else_clause",
+            "header": ""
+          },
+          {
+            "kind": "for",
+            "node_kind": "for_statement",
+            "header": "i < 3"
+          },
+          {
+            "kind": "while",
+            "node_kind": "while_statement",
+            "header": "(j < 2)"
+          },
+          {
+            "kind": "if",
+            "node_kind": "if_statement",
+            "header": "(j == 1)"
+          },
+          {
+            "kind": "continue",
+            "node_kind": "continue_statement",
+            "header": ""
+          },
+          {
+            "kind": "break",
+            "node_kind": "break_statement",
+            "header": ""
+          },
+          {
+            "kind": "switch",
+            "node_kind": "switch_statement",
+            "header": "(x)"
+          },
+          {
+            "kind": "case",
+            "node_kind": "case_statement",
+            "header": "1"
+          },
+          {
+            "kind": "break",
+            "node_kind": "break_statement",
+            "header": ""
+          },
+          {
+            "kind": "case",
+            "node_kind": "case_statement",
+            "header": ""
+          },
+          {
+            "kind": "break",
+            "node_kind": "break_statement",
+            "header": ""
+          },
+          {
+            "kind": "return",
+            "node_kind": "return_statement",
+            "header": ""
+          }
+        ]
+      }
+    },
+    {
+      "path": "/Users/austinshen/Documents/Umich/2026Winter/EECS498_programSynthesis/cpp2rust/preprocessor/test_inputs/nullable_ptr.cpp",
+      "root_has_error": false,
+      "extracted": {
+        "variables": [
+          {
+            "name": "p",
+            "type_spelling": "int",
+            "role": "parameter",
+            "nullability_note": "Variable is guarded/checked against nullptr/NULL in the source; consider mapping to Option<...> in Rust."
+          }
+        ],
+        "functions": [
+          {
+            "name": "nullable_ptr",
+            "return_type": "int",
+            "parameters": [
+              [
+                "int",
+                "p"
+              ]
+            ],
+            "is_definition": true
+          }
+        ],
+        "operators": [
+          {
+            "spelling": "==",
+            "kind": "binary"
+          },
+          {
+            "spelling": "!",
+            "kind": "unary"
+          }
+        ],
+        "literals": [
+          "-1",
+          "-2"
+        ],
+        "control_flow": [
+          {
+            "kind": "if",
+            "node_kind": "if_statement",
+            "header": "(p == nullptr)"
+          },
+          {
+            "kind": "return",
+            "node_kind": "return_statement",
+            "header": ""
+          },
+          {
+            "kind": "if",
+            "node_kind": "if_statement",
+            "header": "(!p)"
+          },
+          {
+            "kind": "return",
+            "node_kind": "return_statement",
+            "header": ""
+          },
+          {
+            "kind": "return",
+            "node_kind": "return_statement",
+            "header": ""
+          }
+        ]
+      }
+    }
+  ]
+}

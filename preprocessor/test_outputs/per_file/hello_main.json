@@ -1,0 +1,21 @@
+{
+  "variables": [],
+  "functions": [
+    {
+      "name": "main",
+      "return_type": "int",
+      "parameters": [],
+      "is_definition": true
+    }
+  ],
+  "operators": [
+    {
+      "spelling": "<<",
+      "kind": "binary"
+    }
+  ],
+  "literals": [
+    "\"hello\\n\"",
+    "0"
+  ]
+}
