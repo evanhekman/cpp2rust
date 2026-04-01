@@ -127,9 +127,10 @@
     {
       "name": "a",
       "ptr_associated_with_new_delete": false,
+      "ptr_data_mutated": true,
       "ptr_nullifiable": false,
       "ptr_used_in_arithmetic": true,
-      "type": "&[i32]"
+      "type": "&mut [i32]"
     }
   ],
   "return_type": "i32"

@@ -63,6 +63,10 @@ fn map_types_in_place(doc: &mut Value) {
                 .get("ptr_associated_with_new_delete")
                 .and_then(Value::as_bool)
                 .unwrap_or(false);
+            let ptr_data_mutated = p
+                .get("ptr_data_mutated")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
             if ty.is_empty() {
                 continue;
             }
@@ -72,6 +76,7 @@ fn map_types_in_place(doc: &mut Value) {
                     &ty,
                     ptr_used_in_arithmetic,
                     ptr_associated_with_new_delete,
+                    ptr_data_mutated,
                 )
             } else {
                 map_cpp_type_to_rust(&ty)
@@ -87,7 +92,8 @@ fn map_types_in_place(doc: &mut Value) {
                     "type": mapped,
                     "ptr_nullifiable": ptr_nullifiable,
                     "ptr_used_in_arithmetic": ptr_used_in_arithmetic,
-                    "ptr_associated_with_new_delete": ptr_associated_with_new_delete
+                    "ptr_associated_with_new_delete": ptr_associated_with_new_delete,
+                    "ptr_data_mutated": ptr_data_mutated
                 });
             } else {
                 *p = json!({ "name": name, "type": mapped });
@@ -103,7 +109,7 @@ fn map_types_in_place(doc: &mut Value) {
                     *ret = Value::String("()".into());
                 } else {
                     let mapped = if s.contains('*') {
-                        map_cpp_pointer_type_to_rust(s, false, false)
+                        map_cpp_pointer_type_to_rust(s, false, false, false)
                     } else {
                         map_cpp_type_to_rust(s)
                     };
@@ -148,6 +154,7 @@ fn map_types_in_value(v: &mut Value) {
                             ty,
                             ptr_used_in_arithmetic,
                             ptr_associated_with_new_delete,
+                            false, // AST-internal nodes: don't propagate ptr_data_mutated
                         )
                     } else {
                         map_cpp_type_to_rust(ty)
@@ -220,6 +227,7 @@ fn map_cpp_pointer_type_to_rust(
     cpp_type: &str,
     ptr_used_in_arithmetic: bool,
     ptr_associated_with_new_delete: bool,
+    ptr_data_mutated: bool,
 ) -> String {
     let t = normalize_cpp_type(cpp_type);
     let base_cpp = strip_pointer_suffix(&t);
@@ -227,7 +235,11 @@ fn map_cpp_pointer_type_to_rust(
     if ptr_associated_with_new_delete {
         format!("Box<{base}>")
     } else if ptr_used_in_arithmetic {
-        format!("&[{base}]")
+        if ptr_data_mutated {
+            format!("&mut [{base}]")
+        } else {
+            format!("&[{base}]")
+        }
     } else {
         format!("&{base}")
     }
