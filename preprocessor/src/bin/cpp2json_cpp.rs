@@ -224,9 +224,14 @@ fn decl_stmt(n: Node<'_>, whole_src: &str, src: &[u8]) -> Option<Value> {
         }
     }
     let d = target?;
+    let base_ty = n
+        .child_by_field_name("type")
+        .map(|t| text(t, src))
+        .unwrap_or_default();
     let lhs_decl = d.child_by_field_name("declarator")?;
     let var_name = base_name(lhs_decl, src);
-    let is_ptr = text(lhs_decl, src).contains('*');
+    let full_ty = merge_type_and_declarator(&base_ty, lhs_decl, src);
+    let is_ptr = full_ty.contains('*');
     let ptr_null_compared_or_assigned = if is_ptr {
         has_nullptr_usage(whole_src, &var_name)
     } else {
@@ -239,12 +244,13 @@ fn decl_stmt(n: Node<'_>, whole_src: &str, src: &[u8]) -> Option<Value> {
     let lhs = if is_ptr {
         json!({
             "var": var_name,
+            "type": full_ty,
             "ptr_null_compared_or_assigned": ptr_null_compared_or_assigned,
             "ptr_used_in_arithmetic": has_pointer_arithmetic_usage(whole_src, &var_name),
             "ptr_associated_with_new_delete": has_new_delete_usage(whole_src, &var_name)
         })
     } else {
-        json!({ "var": var_name })
+        json!({ "var": var_name, "type": full_ty })
     };
     Some(json!({ "op": "let", "args": [lhs, rhs] }))
 }
