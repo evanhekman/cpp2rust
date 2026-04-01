@@ -46,6 +46,11 @@ The validator takes a rust candidate program and a set of pre/post conditions, t
 ### Testing
 Validator should be able to take `rust/` and `prepost/` inputs and produce `validated/` outputs.
 
+The orchestrator file should live in root and call `python validator/validate.py --input [INPUT FILE] --output [OUTPUT FILE]`
+Alternatively, you could import and call the run_validator function.
+
+validate.py returns a tuple containing the return code (not really important) and the verification success (true if verified, false if not) 
+
 
 # Setup
 ## Using rust
