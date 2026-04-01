@@ -99,6 +99,7 @@
     {
       "name": "v",
       "ptr_associated_with_new_delete": false,
+      "ptr_data_mutated": false,
       "ptr_nullifiable": false,
       "ptr_used_in_arithmetic": true,
       "type": "&[i32]"

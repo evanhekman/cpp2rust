@@ -108,7 +108,8 @@ fn function_params(fd: Node<'_>, whole_src: &str, src: &[u8]) -> Vec<Value> {
                 "type": full_ty,
                 "ptr_nullifiable": has_nullptr_usage(whole_src, &name),
                 "ptr_used_in_arithmetic": has_pointer_arithmetic_usage(whole_src, &name),
-                "ptr_associated_with_new_delete": has_new_delete_usage(whole_src, &name)
+                "ptr_associated_with_new_delete": has_new_delete_usage(whole_src, &name),
+                "ptr_data_mutated": has_pointer_write_through(whole_src, &name)
             }));
         } else {
             out.push(json!({ "name": name, "type": full_ty }));
@@ -415,6 +416,51 @@ fn has_pointer_arithmetic_usage(source: &str, var_name: &str) -> bool {
         .iter()
         .filter_map(|p| Regex::new(p).ok())
         .any(|re| re.is_match(source))
+}
+
+/// Returns true if the data pointed to by `var_name` is written through in `source`.
+/// Covers:
+///   - direct writes: `*var = ...` or `var[i] = ...`
+///   - transitive writes: a local pointer initialised from `var` is later written through
+fn has_pointer_write_through(source: &str, var_name: &str) -> bool {
+    if has_direct_deref_write(source, var_name) {
+        return true;
+    }
+    for derived in derived_pointer_vars(source, var_name) {
+        if has_direct_deref_write(source, &derived) {
+            return true;
+        }
+    }
+    false
+}
+
+/// Check for `*var = ...` (not `==`) or `var[...] = ...` (not `==`).
+/// Uses `=[^=]` instead of a lookahead since the regex crate doesn't support lookaheads.
+fn has_direct_deref_write(source: &str, var_name: &str) -> bool {
+    let v = regex::escape(var_name);
+    let patterns = [
+        format!(r"\*\s*\b{v}\b\s*=[^=]"),
+        format!(r"\b{v}\b\s*\[[^\]]*\]\s*=[^=]"),
+    ];
+    patterns
+        .iter()
+        .filter_map(|p| Regex::new(p).ok())
+        .any(|re| re.is_match(source))
+}
+
+/// Find names of local pointer variables initialised from an expression containing `var_name`.
+/// Matches declarations of the form `T* local = ... var_name ...;`.
+fn derived_pointer_vars(source: &str, var_name: &str) -> Vec<String> {
+    let v = regex::escape(var_name);
+    // `\bTYPE\b \* local = ... var_name ...;`
+    let pat = format!(r"\b\w+\s*\*+\s*(\w+)\s*=\s*[^;]*\b{v}\b");
+    let re = match Regex::new(&pat) {
+        Ok(r) => r,
+        Err(_) => return Vec::new(),
+    };
+    re.captures_iter(source)
+        .filter_map(|cap| cap.get(1).map(|m| m.as_str().to_string()))
+        .collect()
 }
 
 fn has_new_delete_usage(source: &str, var_name: &str) -> bool {
