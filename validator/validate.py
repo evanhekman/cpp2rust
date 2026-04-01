@@ -15,7 +15,7 @@ def run_validator(input_path: str, output_path: str, phase_uniform: bool = True,
     success = False
     try:
         output = Path(output_path).read_text()
-        success = "// Score: (0, 1)" in output
+        success = "// Score: (2, 0)" in output
     except (FileNotFoundError, OSError):
         pass
 
