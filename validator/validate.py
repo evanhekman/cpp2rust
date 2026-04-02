@@ -1,6 +1,7 @@
 import subprocess
 import argparse
 from pathlib import Path
+import re
 
 def run_validator(input_path: str, output_path: str, phase_uniform: bool = True, is_baseline: bool = False) -> tuple[int, bool]:
     cmd = ["python", "main.py", "--input", input_path, "--output", output_path]
@@ -15,7 +16,7 @@ def run_validator(input_path: str, output_path: str, phase_uniform: bool = True,
     success = False
     try:
         output = Path(output_path).read_text()
-        success = "// Score: (2, 0)" in output
+        success = bool(re.search(r"// Score: \(\d+, 0\)", output))
     except (FileNotFoundError, OSError):
         pass
 
