@@ -1,4 +1,7 @@
+set dotenv-load
+
 root := justfile_directory()
+condgen_bin := root / "target/release/condgen"
 python := root / ".venv/bin/python"
 # TEMP: targets excluded from preprocess and synthesize until preprocessor supports them
 skip_targets := "graphs doubly_linekedlsit shared_mutable_aliasing"
@@ -40,6 +43,30 @@ preprocess BENCH FUNC="": build
         done
     else
         _preprocess "$cpp_dir/{{FUNC}}.cpp" "{{FUNC}}"
+    fi
+
+# generate pre/post conditions for a benchmark using GPT-4o
+# just condgen benchmark0                  → all targets
+# just condgen benchmark0 dot_product      → one target
+condgen BENCH FUNC="": build
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cpp_dir={{data}}/{{BENCH}}/cpp
+    processed_dir={{data}}/{{BENCH}}/processed
+    prepost_dir={{data}}/{{BENCH}}/prepost
+    _condgen() {
+        local func="$1"
+        {{condgen_bin}} "$cpp_dir/${func}.cpp" "$processed_dir/${func}.json" "$prepost_dir/${func}.rs"
+    }
+    _skip() { for s in {{skip_targets}}; do [ "$1" = "$s" ] && return 0; done; return 1; }
+    if [ -z "{{FUNC}}" ]; then
+        for json in "$processed_dir"/*.json; do
+            func="$(basename "$json" .json)"
+            if _skip "$func"; then echo "skipping $func (excluded)"; continue; fi
+            _condgen "$func"
+        done
+    else
+        _condgen "{{FUNC}}"
     fi
 
 # full pipeline: preprocess then synthesize
