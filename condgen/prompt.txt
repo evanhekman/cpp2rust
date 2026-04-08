@@ -14,15 +14,19 @@ Each spec function object has:
 
 Rules:
 - Express requires/ensures using valid Verus syntax: `param@.len()` for slice lengths, `param@[i as int]` for slice indexing, `result` for the return value.
+- For mutable slice parameters, use `old(a)@` to refer to the pre-state value in ensures (not `old(a@[...])` — `old()` must wrap the variable only, e.g. `old(a)@[i]`).
 - When a postcondition requires summarizing a loop (e.g. a sum or product over elements), define a recursive spec function in "spec_fns" and reference it in "ensures". Do not invent non-existent syntax like sum() or quantifier notation.
-- Only add preconditions that are explicitly required for correctness. Do not add constraints like length > 0 unless the code requires it.
+- Only add preconditions that are explicitly required for correctness. Do not add constraints unless the code would be incorrect or undefined without them. Concretely: a loop that steps by 2 (`p += 2`, `i += 2`) does NOT require even length — for a slice of length 3, indices 0 and 2 are both valid. `len % 2 == 0` is WRONG as a precondition here. Only add `len > 0` if the code accesses index 0 unconditionally before any loop.
 - For numeric accumulation loops, express the overflow bound as an arithmetic expression using TYPE::MAX constants and operators (+, -, *, /, ^). Do NOT compute the final integer yourself — output the expression and it will be evaluated exactly. For example:
   - single array sum with i32 accumulator: `a@.len() <= i32::MAX / u8::MAX`
   - dot product of two u8 arrays with i32 accumulator: `a@.len() <= i32::MAX / (u8::MAX * u8::MAX)`
   - dot product of two u8 arrays with u32 accumulator: `a@.len() <= u32::MAX / (u8::MAX ^ 2)`
   Use the actual accumulator type (usually the return type) and actual element types.
-- Spec function bodies must be valid Verus expressions. Use `if ... { ... } else { ... }` for conditionals.
-- Prefer fewer, precise conditions over many approximate ones.
+- Spec function bodies must be valid Verus expressions. Use `if ... { ... } else { ... }` for conditionals. Do not use built-in functions like max(), min(), abs() — they do not exist in Verus spec context; use if/else instead.
+- Verus forall syntax is `forall|i: int| condition` — the `|` closes the binder. Do not use a comma after the type: `forall|i: int, condition` is invalid.
+- The ensures must fully characterize the return value. For a maximum-finding function, a single forall (`result >= all elements`) is not enough — you also need an exists (`result == some element`), or use a spec function. Prefer a spec function for complex characterizations.
+- In ensures, do not use `seq.contains(x)` — it is not available. Use an explicit exists instead: `exists|i: int| 0 <= i && i < a@.len() && a@[i] == x`.
+- When writing a spec function for "max of even-indexed elements", step through even indices only. A[0], A[2], A[4], ... The recursive spec takes A[0] and recurses on A.subrange(2, A.len()). Do NOT access A[1] in the spec — odd indices are irrelevant.
 - Output only valid JSON, no explanation.
 
 Example output for a function that sums an array:
