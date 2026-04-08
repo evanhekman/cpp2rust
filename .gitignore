@@ -3,6 +3,7 @@
 .env
 .venv
 target
+target-local
 verus
 verus-repo
 verus-proof-synthesis
