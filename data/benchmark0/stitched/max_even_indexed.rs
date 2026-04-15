@@ -10,13 +10,7 @@ pub fn max_even_indexed(a: &[i32]) -> (result: i32)
         forall|i: int| (0 <= i && i < a@.len() && i % 2 == 0) ==> a@[i] <= result,
         exists|i: int| (0 <= i && i < a@.len() && i % 2 == 0) && a@[i] == result,
 {
-    let mut m = a[0];
-    let mut i = 2usize;
-    while i < a.len() {
-        if a[i] > m { m = a[i]; }
-        i += 2;
-    }
-    m
+    let mut m: i32 = a[0usize]; let mut p: usize = 0usize; while (p < a.len()) { if (a[p] > m) { m = a[p]; } p += 2usize; } return m; 
 }
 
 } // verus!

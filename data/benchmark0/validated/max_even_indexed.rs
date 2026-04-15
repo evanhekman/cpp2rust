@@ -10,22 +10,26 @@ pub fn max_even_indexed(a: &[i32]) -> (result: i32)
         forall|i: int| (0 <= i && i < a@.len() && i % 2 == 0) ==> a@[i] <= result,
         exists|i: int| (0 <= i && i < a@.len() && i % 2 == 0) && a@[i] == result,
 {
-    let mut m = a[0];
-    let mut i = 2usize;
-
-    while i < a.len()
+    let mut m: i32 = a[0usize];
+    let mut p: usize = 0usize;
+    
+    while (p < a.len())
         invariant
-            i % 2 == 0,
-            i <= a@.len() + 1,
+            p <= a@.len() + 1,
+            p % 2 == 0,
+            a@.len() >= 1,
             a@.len() <= usize::MAX / 2,
-            forall|j: int| (0 <= j && j < i as int && j % 2 == 0) ==> a@[j] <= m,
-            exists|j: int| (0 <= j && j < a@.len() && j % 2 == 0) && a@[j] == m,
-        decreases a@.len() + 1 - i,
+            forall|i: int| (0 <= i && i < p as int && i % 2 == 0 && i < a@.len()) ==> a@[i] <= m,
+            exists|i: int| (0 <= i && i < a@.len() && i % 2 == 0 && i <= p as int) && a@[i] == m,
     {
-        if a[i] > m { m = a[i]; }
-        i += 2;
+        if (a[p] > m) {
+            m = a[p];
+        }
+        p = p + 2;
     }
-    m
+    return m;
 }
+
+fn main() {}
 
 } // verus!

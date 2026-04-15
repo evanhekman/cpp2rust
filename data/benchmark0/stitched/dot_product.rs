@@ -16,11 +16,7 @@ pub fn dot(a: &[u8], b: &[u8]) -> (result: u32)
     ensures
         result as int == partial_dot(a@, b@, a@.len() as int),
 {
-    let mut sum: u32 = 0;
-    for i in 0..a.len() {
-        sum += (a[i] as u32) * (b[i] as u32);
-    }
-    sum
+    let mut sum: i32 = 0; for i in 0..a.len() { sum += ((a[i] as i32) * (b[i] as i32)); } return sum; 
 }
 
 } // verus!

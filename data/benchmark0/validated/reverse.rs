@@ -2,41 +2,43 @@ use vstd::prelude::*;
 
 verus! {
 
-pub fn reverse(a: &mut [i32])
+pub fn reverse(a: &mut Vec<i32>)
     requires
         old(a)@.len() >= 1,
     ensures
         a@.len() == old(a)@.len(),
         forall|k: int| 0 <= k && k < a@.len() ==> a@[k] == old(a)@[a@.len() - 1 - k],
 {
-    let ghost orig = a@;
     let n = a.len();
-    let half = n / 2;
-    let mut lo = 0usize;
-
-    while lo < half
+    if n <= 1 {
+        return;
+    }
+    
+    let mut lo: usize = 0;
+    let mut hi: usize = n - 1;
+    let ghost old_a = a@;
+    
+    while lo < hi
         invariant
-            n == a@.len(),
-            n == orig.len(),
-            n >= 1,
-            half == n / 2,
-            lo <= half,
-            // swapped positions: a@[k] == orig[n-1-k] for both ends
-            forall|k: int| 0 <= k && k < lo as int ==>
-                #[trigger] a@[k] == orig[orig.len() - 1 - k],
-            forall|k: int| orig.len() - lo as int <= k && k < orig.len() ==>
-                #[trigger] a@[k] == orig[orig.len() - 1 - k],
-            // middle untouched
-            forall|k: int| lo as int <= k && k < orig.len() - lo as int ==>
-                #[trigger] a@[k] == orig[k],
-        decreases half - lo,
+            lo <= hi + 1,
+            lo <= n,
+            hi < n,
+            a.len() == n,
+            n == old_a.len(),
+            lo as int + hi as int == n as int - 1,
+            forall|k: int| #![auto] 0 <= k < lo ==> a@[k] == old_a[n as int - 1 - k],
+            forall|k: int| #![auto] hi < k < n ==> a@[k] == old_a[n as int - 1 - k],
+            forall|k: int| #![auto] lo <= k <= hi ==> a@[k] == old_a[k],
     {
-        let hi = n - 1 - lo;
         let tmp = a[lo];
-        a[lo] = a[hi];
-        a[hi] = tmp;
-        lo += 1;
+        a.set(lo, a[hi]);
+        a.set(hi, tmp);
+        
+        lo = lo + 1;
+        hi = hi - 1;
     }
 }
+
+fn main() {}
 
 } // verus!

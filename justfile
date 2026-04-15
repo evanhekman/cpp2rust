@@ -1,5 +1,7 @@
 root := justfile_directory()
 python := root / ".venv/bin/python"
+verus_solver_root := root / "../verus-proof-synthesis/.claude/worktrees/ecstatic-sammet"
+validator := root / "target/release/transform_verus"
 # TEMP: targets excluded from preprocess and synthesize until preprocessor supports them
 skip_targets := "graphs doubly_linekedlsit shared_mutable_aliasing"
 autoverus := root / "verus-proof-synthesis/autoverus"
@@ -72,6 +74,14 @@ synthesize BENCH TARGET="" DISABLE="": build
     else
         {{synth}} --file "$dataset/{{TARGET}}.json" --symbols {{symbols}} $disable_flags
     fi
+
+# end-to-end pipeline: preprocess → synthesize → stitch → verus_solver
+# just end-to-end                         → all benchmark0 targets
+# just end-to-end benchmark0              → all targets in benchmark
+# just end-to-end benchmark0 dot_product  → single target
+end-to-end BENCH="benchmark0" TARGETS="": build
+    python3 {{root}}/scripts/pipeline.py --bench {{BENCH}} \
+        $([ -n "{{TARGETS}}" ] && echo "--targets {{TARGETS}}" || true)
 
 # run verus on a file
 verus FILE:

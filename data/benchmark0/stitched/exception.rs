@@ -10,12 +10,7 @@ pub fn first_negative(v: &[i32]) -> (result: i32)
         result >= 0 ==> forall|j: int| 0 <= j && j < result as int ==> v@[j] >= 0,
         result == -1 ==> forall|j: int| 0 <= j && j < v@.len() ==> v@[j] >= 0,
 {
-    for i in 0..v.len() {
-        if v[i] < 0 {
-            return i as i32;
-        }
-    }
-    -1
+    { for i in 0..v.len() { if (v[i] < 0) { return i; } } return -1; } 
 }
 
 } // verus!
