@@ -69,6 +69,11 @@ condgen BENCH FUNC="": build
         _condgen "{{FUNC}}"
     fi
 
+# run condgen on a condgen-specific benchmark
+# just condgen-bench b0                  → all targets
+# just condgen-bench b0 sum_array        → one target
+condgen-bench BENCH FUNC="": (condgen "condgen/" + BENCH FUNC)
+
 # full pipeline: preprocess then synthesize
 # just pipeline benchmark0                  → all targets
 # just pipeline benchmark0 dot_product      → one target

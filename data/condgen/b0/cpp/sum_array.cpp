@@ -1,0 +1,8 @@
+// depth: 6
+int sum_array(int* a, int n) {
+    int s = 0;
+    for (int i = 0; i < n; i++) {
+        s += a[i];
+    }
+    return s;
+}
