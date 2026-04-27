@@ -14,24 +14,49 @@ Each spec function object has:
 
 Rules:
 - Express requires/ensures using valid Verus syntax: `param@.len()` for slice lengths, `param@[i as int]` for slice indexing, `result` for the return value.
-- For mutable slice parameters, use `old(a)@` to refer to the pre-state value in ensures (not `old(a@[...])` — `old()` must wrap the variable only, e.g. `old(a)@[i]`).
+- For mutable slice parameters, use `old(a)@` to refer to the pre-state value in ensures (not `old(a@[...])` — `old()` must wrap the variable only, e.g. `old(a)@[i]`). When the postcondition is a whole-sequence relationship, prefer the sequence method form over a forall where one exists: e.g. `a@ == old(a)@.reversed()` is cleaner than a forall over indices.
 - When a postcondition requires summarizing a loop (e.g. a sum or product over elements), define a recursive spec function in "spec_fns" and reference it in "ensures". Do not invent non-existent syntax like sum() or quantifier notation.
-- Only add preconditions that are explicitly required for correctness. Do not add constraints unless the code would be incorrect or undefined without them. Concretely: a loop that steps by 2 (`p += 2`, `i += 2`) does NOT require even length — for a slice of length 3, indices 0 and 2 are both valid. `len % 2 == 0` is WRONG as a precondition here. Only add `len > 0` if the code accesses index 0 unconditionally before any loop.
-- For numeric accumulation loops, express the overflow bound as an arithmetic expression using TYPE::MAX constants and operators (+, -, *, /, ^). Do NOT compute the final integer yourself — output the expression and it will be evaluated exactly. For example:
-  - single array sum with i32 accumulator: `a@.len() <= i32::MAX / u8::MAX`
+- Only add preconditions that are explicitly required for correctness. Do not add constraints unless the code would be incorrect or undefined without them. Concretely: a loop that steps by 2 (`p += 2`, `i += 2`) does NOT require even length — for a slice of length 3, indices 0 and 2 are both valid. `len % 2 == 0` is WRONG as a precondition here. Only add `len > 0` if the code accesses index 0 unconditionally before any loop. In particular, loops that iterate over a slice (including in-place operations like reverse or shuffle) are safe on empty slices — do NOT add `a@.len() > 0` for them.
+- For numeric accumulation loops, only add an overflow precondition when the element type is strictly narrower than the accumulator type (e.g. u8 elements with i32 accumulator). If the element type is the same width or wider than the accumulator (e.g. i32 elements with i32 accumulator), omit the overflow precondition entirely — it cannot be expressed as a useful length bound. When the element type is narrower, express the bound as an arithmetic expression using TYPE::MAX constants and operators (+, -, *, /, ^). Do NOT compute the final integer yourself — output the expression and it will be evaluated exactly. For example:
+  - single array sum of u8 with i32 accumulator: `a@.len() <= i32::MAX / u8::MAX`
   - dot product of two u8 arrays with i32 accumulator: `a@.len() <= i32::MAX / (u8::MAX * u8::MAX)`
   - dot product of two u8 arrays with u32 accumulator: `a@.len() <= u32::MAX / (u8::MAX ^ 2)`
+  - single array sum of i32 with i32 accumulator: (no overflow precondition)
   Use the actual accumulator type (usually the return type) and actual element types.
 - Spec function bodies must be valid Verus expressions. Use `if ... { ... } else { ... }` for conditionals. Do not use built-in functions like max(), min(), abs() — they do not exist in Verus spec context; use if/else instead.
 - Verus forall syntax is `forall|i: int| condition` — the `|` closes the binder. Do not use a comma after the type: `forall|i: int, condition` is invalid.
+- Verus does not support chained comparisons. Always write them with explicit `&&`: `0 <= i && i < n`, never `0 <= i < n`.
+- Do not add preconditions that are trivially satisfied by type constraints. For example, a `u8` value is always `<= 255` which is always `< i32::MAX` — never emit a requires about this. Only add preconditions that can actually be violated.
 - The ensures must fully characterize the return value. For a maximum-finding function, a single forall (`result >= all elements`) is not enough — you also need an exists (`result == some element`), or use a spec function. Prefer a spec function for complex characterizations.
 - In ensures, do not use `seq.contains(x)` — it is not available. Use an explicit exists instead: `exists|i: int| 0 <= i && i < a@.len() && a@[i] == x`.
-- When writing a spec function for "max of even-indexed elements", step through even indices only. A[0], A[2], A[4], ... The recursive spec takes A[0] and recurses on A.subrange(2, A.len()). Do NOT access A[1] in the spec — odd indices are irrelevant.
+- When writing a spec function for "max of even-indexed elements", step through even indices only: A[0], A[2], A[4], ... The spec takes only the sequence (no extra parameters). Base case: when `a.len() == 1`, return `a[0] as int`. Recursive case: compare `a[0]` with the result of recursing on `a.subrange(2, a.len())`. Do NOT pass `old(a)` or any extra parameter into the spec function — it only needs the current sequence. Example:
+  {
+    "name": "max_even_indexed_spec",
+    "params": [{"name": "a", "type": "Seq<i32>"}],
+    "return_type": "int",
+    "decreases": "a.len()",
+    "body": "if a.len() <= 1 { a[0] as int } else { let rest = max_even_indexed_spec(a.subrange(2, a.len() as int)); if a[0] as int >= rest { a[0] as int } else { rest } }"
+  }
 - Output only valid JSON, no explanation.
 
-Example output for a function that sums an array:
+Example output for a function that sums a u8 array into an i32 (element narrower than accumulator — overflow bound applies):
 {
   "requires": ["a@.len() <= 33025"],
+  "ensures": ["result as int == partial_sum(a@, a@.len() as int)"],
+  "spec_fns": [
+    {
+      "name": "partial_sum",
+      "params": [{"name": "a", "type": "Seq<u8>"}, {"name": "n", "type": "int"}],
+      "return_type": "int",
+      "decreases": "n",
+      "body": "if n <= 0 { 0 } else { partial_sum(a, n - 1) + a[n - 1] as int }"
+    }
+  ]
+}
+
+Example output for a function that sums an i32 array into an i32 (same-width — no overflow precondition):
+{
+  "requires": [],
   "ensures": ["result as int == partial_sum(a@, a@.len() as int)"],
   "spec_fns": [
     {
