@@ -81,6 +81,13 @@ condgen-bench BENCH FUNC="": (condgen "condgen/" + BENCH FUNC)
 # just pipeline benchmark0 dot_product      → one target
 pipeline BENCH FUNC="": (preprocess BENCH FUNC) (synthesize BENCH FUNC)
 
+# full end-to-end pipeline including condgen, with timing table
+# just run benchmark0                       → all targets
+# just run benchmark0 dot_product           → one target
+run BENCH="benchmark0" TARGETS="": build
+    python3 {{root}}/scripts/pipeline.py --bench {{BENCH}} --condgen \
+        $([ -n "{{TARGETS}}" ] && echo "--targets {{TARGETS}}" || true)
+
 # synthesize targets in a benchmark dataset
 # just synthesize synthesizer/b0                                       → all b0 targets
 # just synthesize synthesizer/b0 sum_array                             → one b0 target

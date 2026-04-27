@@ -24,14 +24,23 @@ from pathlib import Path
 # Paths
 # ---------------------------------------------------------------------------
 REPO = Path(__file__).resolve().parent.parent          # cpp2rust/
-VERUS_SOLVER_REPO = REPO.parent / "verus-proof-synthesis" / ".claude" / "worktrees" / "ecstatic-sammet"
-VERUS_SOLVER_CONFIG = VERUS_SOLVER_REPO / "verus_solver" / "config.local.yaml"
 
 CPP2JSON    = REPO / "target" / "release" / "cpp2json_cpp"
+CONDGEN     = REPO / "target" / "release" / "condgen"
 MAPJSON     = REPO / "target" / "release" / "map_cpp_json_to_rust_json"
 SYNTH       = REPO / "target" / "release" / "synth"
 VALIDATOR   = REPO / "target" / "release" / "transform_verus"
+VERUS       = REPO / "verus" / "verus"
 SYMBOLS     = REPO / "synthesizer" / "symbols.txt"
+
+# Load .env once at startup so subprocesses (e.g. condgen) inherit API keys.
+_env_file = REPO / ".env"
+if _env_file.exists():
+    for _line in _env_file.read_text().splitlines():
+        _line = _line.strip()
+        if "=" in _line and not _line.startswith("#"):
+            _k, _, _v = _line.partition("=")
+            os.environ.setdefault(_k.strip(), _v.strip().strip('"').strip("'"))
 
 SKIP = {"graphs", "doubly_linekedlsit", "shared_mutable_aliasing"}
 
@@ -91,6 +100,12 @@ def stage_preprocess(cpp_file: Path, out_json: Path) -> tuple[bool, str, float]:
         tmp.unlink(missing_ok=True)
 
 
+def stage_condgen(cpp_file: Path, json_file: Path, prepost_file: Path) -> tuple[bool, str, float]:
+    """C++ + processed JSON → prepost Rust spec via LLM."""
+    prepost_file.parent.mkdir(parents=True, exist_ok=True)
+    return _run([str(CONDGEN), str(cpp_file), str(json_file), str(prepost_file)])
+
+
 def stage_synthesize(json_file: Path, prepost_file: Path, stitched_file: Path) -> tuple[bool, str, float]:
     """
     processed JSON → stitched Rust (synth body + validator splice).
@@ -144,53 +159,17 @@ def stage_synthesize(json_file: Path, prepost_file: Path, stitched_file: Path) -
         impl_path.unlink(missing_ok=True)
 
 
-def stage_verify(stitched_file: Path, validated_file: Path) -> tuple[bool, str, float]:
-    """Stitched Rust → Verified Rust via verus_solver."""
+def stage_validate(stitched_file: Path, validated_file: Path) -> tuple[bool, str, float]:
+    """Stitched Rust → Verified Rust. TODO: wire up correct validator."""
     validated_file.parent.mkdir(parents=True, exist_ok=True)
-
-    # Load the .env from the verus_solver repo so ANTHROPIC_API_KEY is available.
-    env = os.environ.copy()
-    env_file = VERUS_SOLVER_REPO / ".env"
-    if env_file.exists():
-        for line in env_file.read_text().splitlines():
-            line = line.strip()
-            if "=" in line and not line.startswith("#"):
-                k, _, v = line.partition("=")
-                env[k.strip()] = v.strip().strip('"').strip("'")
-
-    cmd = [
-        sys.executable, "-m", "verus_solver.cli", "solve",
-        str(stitched_file),
-        "--out", str(validated_file),
-        "--config", str(VERUS_SOLVER_CONFIG),
-    ]
-    t0 = time.perf_counter()
-    try:
-        r = subprocess.run(
-            cmd, capture_output=True, text=True,
-            cwd=str(VERUS_SOLVER_REPO), env=env, timeout=600,
-        )
-        elapsed = time.perf_counter() - t0
-        out = r.stdout + r.stderr
-        # Parse result JSON from stdout.
-        try:
-            result = json.loads(r.stdout.strip())
-            return bool(result.get("success")), out, elapsed
-        except Exception:
-            return r.returncode == 0, out, elapsed
-    except subprocess.TimeoutExpired:
-        elapsed = time.perf_counter() - t0
-        return False, "TIMEOUT", elapsed
-    except Exception as e:
-        elapsed = time.perf_counter() - t0
-        return False, str(e), elapsed
+    return False, "validator not yet wired up", 0.0
 
 
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
-def run_pipeline(bench: str, targets: list[str], verbose: bool = False):
+def run_pipeline(bench: str, targets: list[str], verbose: bool = False, condgen: bool = False):
     data = REPO / "data" / bench
     cpp_dir     = data / "cpp"
     prepost_dir = data / "prepost"
@@ -206,13 +185,17 @@ def run_pipeline(bench: str, targets: list[str], verbose: bool = False):
             p.stem for p in cpp_dir.glob("*.cpp") if p.stem not in SKIP
         )
 
-    print(f"\n{BLD}Pipeline: {bench}  ({len(targets)} targets){RST}")
-    print(f"  verus_solver config: {VERUS_SOLVER_CONFIG}")
+    print(f"\n{BLD}Benchmark: {bench}  ({len(targets)} targets){RST}")
     print()
 
     # Table header
-    col = 22
-    header = f"{'Target':<25}  {'Preprocess':^{col}}  {'Synthesize':^{col}}  {'verus_solver':^{col}}"
+    col = 18
+    if condgen:
+        header = (f"{'Target':<20}  {'Preprocess':^{col}}  {'Condgen':^{col}}  "
+                  f"{'Synthesis':^{col}}  {'Validator':^{col}}  {'Total':^{col}}")
+    else:
+        header = (f"{'Target':<20}  {'Preprocess':^{col}}  "
+                  f"{'Synthesis':^{col}}  {'Validator':^{col}}  {'Total':^{col}}")
     print(BLD + header + RST)
     print("─" * len(header))
 
@@ -239,8 +222,21 @@ def run_pipeline(bench: str, targets: list[str], verbose: bool = False):
         if verbose and not ok1:
             print(f"\n[preprocess {target}]\n{out1}\n")
 
+        # Stage 1b: Condgen (optional)
+        if condgen:
+            if ok1:
+                ok_cg, out_cg, t_cg = stage_condgen(cpp_file, json_file, prepost_file)
+            else:
+                ok_cg, out_cg, t_cg = None, "", None
+            row["condgen"] = (ok_cg, t_cg)
+            if verbose and ok_cg is False:
+                print(f"\n[condgen {target}]\n{out_cg}\n")
+            prepost_ready = ok_cg
+        else:
+            prepost_ready = prepost_file.exists()
+
         # Stage 2: Synthesize + Stitch
-        if ok1:
+        if ok1 and prepost_ready:
             ok2, out2, t2 = stage_synthesize(json_file, prepost_file, stitched_file)
         else:
             ok2, out2, t2 = None, "", None
@@ -248,17 +244,14 @@ def run_pipeline(bench: str, targets: list[str], verbose: bool = False):
         if verbose and ok2 is False:
             print(f"\n[synthesize {target}]\n{out2}\n")
 
-        # Stage 3: verus_solver
-        # Use freshly stitched file if synthesis succeeded, else fall back to
-        # pre-existing stitched file (so we can evaluate verus_solver independently).
-        src = stitched_file if stitched_file.exists() else None
-        if src:
-            ok3, out3, t3 = stage_verify(src, validated_file)
+        # Stage 3: Validate with autoverus
+        if ok2:
+            ok3, out3, t3 = stage_validate(stitched_file, validated_file)
         else:
             ok3, out3, t3 = None, "", None
-        row["verify"] = (ok3, t3)
+        row["validate"] = (ok3, t3)
         if verbose and ok3 is False:
-            print(f"\n[verify {target}]\n{out3}\n")
+            print(f"\n[validate {target}]\n{out3}\n")
 
         rows.append(row)
 
@@ -271,18 +264,35 @@ def run_pipeline(bench: str, targets: list[str], verbose: bool = False):
             ts = f"({t:.1f}s)" if t is not None else ""
             return f"{sym} {ts:>8}".ljust(col + 9)  # extra for ANSI
 
+        def total_time(row):
+            stages = ["preprocess", "synthesize", "validate"]
+            if condgen:
+                stages.insert(1, "condgen")
+            t = sum(r[1] for k in stages if (r := row.get(k)) and r[1] is not None)
+            all_ok = all(row.get(k, (False,))[0] for k in stages if row.get(k, (None,))[0] is not None)
+            return fmt((all_ok, t))
+
         p = fmt(row["preprocess"])
         s = fmt(row["synthesize"])
-        v = fmt(row["verify"])
-        print(f"  {target:<23}  {p}  {s}  {v}")
+        v = fmt(row["validate"])
+        tot = total_time(row)
+        if condgen:
+            cg = fmt(row["condgen"])
+            print(f"  {target:<18}  {p}  {cg}  {s}  {v}  {tot}")
+        else:
+            print(f"  {target:<18}  {p}  {s}  {v}  {tot}")
 
     # Summary
     print()
     n_pre  = sum(1 for r in rows if r["preprocess"][0])
     n_syn  = sum(1 for r in rows if r["synthesize"][0])
-    n_ver  = sum(1 for r in rows if r["verify"][0])
+    n_val  = sum(1 for r in rows if r["validate"][0])
     n      = len(rows)
-    print(f"{BLD}Summary: preprocess {n_pre}/{n}  synthesize {n_syn}/{n}  verus_solver {n_ver}/{n}{RST}")
+    if condgen:
+        n_cg = sum(1 for r in rows if r["condgen"][0])
+        print(f"{BLD}Summary: preprocess {n_pre}/{n}  condgen {n_cg}/{n}  synthesis {n_syn}/{n}  validator {n_val}/{n}{RST}")
+    else:
+        print(f"{BLD}Summary: preprocess {n_pre}/{n}  synthesis {n_syn}/{n}  validator {n_val}/{n}{RST}")
     print()
 
 
@@ -291,8 +301,9 @@ def main():
     ap.add_argument("--bench", default="benchmark0", help="benchmark directory under data/")
     ap.add_argument("--targets", nargs="*", default=[], help="specific targets (default: all)")
     ap.add_argument("--verbose", "-v", action="store_true", help="print stage output on failure")
+    ap.add_argument("--condgen", action="store_true", help="run condgen stage to generate pre/post conditions")
     args = ap.parse_args()
-    run_pipeline(args.bench, args.targets, args.verbose)
+    run_pipeline(args.bench, args.targets, args.verbose, args.condgen)
 
 
 if __name__ == "__main__":

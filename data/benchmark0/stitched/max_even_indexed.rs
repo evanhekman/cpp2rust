@@ -2,13 +2,18 @@ use vstd::prelude::*;
 
 verus! {
 
-pub fn max_even_indexed(a: &[i32]) -> (result: i32)
+pub open spec fn max_even_indexed_spec(a: Seq<i32>) -> int
+    decreases a.len()
+{
+    if a.len() <= 1 { a[0] as int } else { let rest = max_even_indexed_spec(a.subrange(2, a.len() as int)); if a[0] as int >= rest { a[0] as int } else { rest } }
+}
+
+pub fn max_even_indexed(a: &mut [i32]) -> (result: i32)
     requires
-        a@.len() >= 1,
-        a@.len() <= usize::MAX / 2,
+        a@.len() > 0,
     ensures
-        forall|i: int| (0 <= i && i < a@.len() && i % 2 == 0) ==> a@[i] <= result,
-        exists|i: int| (0 <= i && i < a@.len() && i % 2 == 0) && a@[i] == result,
+        result as int == max_even_indexed_spec(a@),
+        exists|i: int| 0 <= i && i < a@.len() && i % 2 == 0 && a@[i] == result as int,
 {
     let mut m: i32 = a[0usize]; let mut p: usize = 0usize; while (p < a.len()) { if (a[p] > m) { m = a[p]; } p += 2usize; } return m; 
 }
