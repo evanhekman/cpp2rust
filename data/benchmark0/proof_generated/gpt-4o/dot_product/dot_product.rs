@@ -1,6 +1,8 @@
 use vstd::prelude::*;
-fn main() {}
+
 verus! {
+
+#[verifier::loop_isolation(false)]
 
 pub open spec fn partial_dot(a: Seq<u8>, b: Seq<u8>, n: int) -> int
     decreases n
@@ -24,3 +26,5 @@ pub fn dot(a: &[u8], b: &[u8]) -> (result: u32)
 }
 
 } // verus!
+// Score: (0, 1)
+// Safe: None

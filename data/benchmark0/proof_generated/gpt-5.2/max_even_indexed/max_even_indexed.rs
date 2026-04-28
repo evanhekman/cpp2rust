@@ -16,11 +16,14 @@ pub fn max_even_indexed(a: &[i32]) -> (result: i32)
         invariant
             a@.len() >= 1,
             a@.len() <= usize::MAX / 2,
-            2 <= i <= a@.len() + 1,
+            0 <= i as int,
+            i as int <= a@.len() + 1,
             i % 2 == 0,
-            forall|j: int| (0 <= j && j < i as int && j < a@.len() && j % 2 == 0) ==> a@[j] <= m,
-            exists|j: int| (0 <= j && j < i as int && j < a@.len() && j % 2 == 0) && a@[j] == m,
-        decreases (a@.len() + 1 - i as int),
+            exists|j: int|
+                0 <= j && j < a@.len() && j % 2 == 0 && j < i as int && a@[j] == m,
+            forall|j: int|
+                0 <= j && j < a@.len() && j % 2 == 0 && j < i as int ==> a@[j] <= m,
+        decreases a@.len() - i as int + 1
     {
         if a[i] > m { m = a[i]; }
         i += 2;

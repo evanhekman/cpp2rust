@@ -4,14 +4,10 @@ from pathlib import Path
 import re
 
 def run_validator(input_path: str, output_path: str, phase_uniform: bool = True, is_baseline: bool = False) -> tuple[int, bool]:
-    cmd = ["python", "main.py", "--input", input_path, "--output", output_path]
+    cmd = ["python", "main.py", "--input", input_path, "--output", output_path, "--disable-safe"]
 
-    if phase_uniform:
-        cmd.append("--phase-uniform")
-    if is_baseline:
-        cmd.append("--is-baseline")
 
-    result = subprocess.run(cmd, cwd="verus-proof-synthesis/autoverus")
+    result = subprocess.run(cmd, cwd="validator/better_autoverus")
 
     success = False
     try:

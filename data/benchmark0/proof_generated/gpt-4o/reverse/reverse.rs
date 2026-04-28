@@ -1,6 +1,8 @@
 use vstd::prelude::*;
-fn main() {}
+
 verus! {
+
+#[verifier::loop_isolation(false)]
 
 pub fn reverse(a: &mut [i32])
     requires
@@ -14,12 +16,14 @@ pub fn reverse(a: &mut [i32])
     let mut hi = a.len() - 1;
     let n = a.len();
     while lo < hi {
-        let tmp = a[hi];
-        a[hi] = a[lo];
-        a[lo] = tmp;
+        let hi = n - 1 - lo;
+        let tmp = a[lo];
+        a[lo] = a[hi];
+        a[hi] = tmp;
         lo += 1;
-        hi -= 1;
     }
 }
 
 } // verus!
+// Score: (0, 1)
+// Safe: None

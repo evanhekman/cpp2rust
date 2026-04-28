@@ -1,0 +1,94 @@
+{
+  "ast": [
+    {
+      "body": [
+        {
+          "condition": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a"
+                  },
+                  {
+                    "var": "i"
+                  }
+                ],
+                "op": "[]"
+              },
+              {
+                "var": "target"
+              }
+            ],
+            "op": "=="
+          },
+          "then": [
+            {
+              "args": [
+                {
+                  "lit": "true"
+                }
+              ],
+              "op": "return"
+            }
+          ]
+        }
+      ],
+      "condition": {
+        "args": [
+          {
+            "var": "i"
+          },
+          {
+            "var": "n"
+          }
+        ],
+        "op": "<"
+      },
+      "init": {
+        "args": [
+          {
+            "type": "i32",
+            "var": "i"
+          },
+          {
+            "lit": "0"
+          }
+        ],
+        "op": "let"
+      },
+      "update": {
+        "args": [
+          {
+            "var": "i"
+          }
+        ],
+        "op": "++"
+      }
+    },
+    {
+      "args": [
+        {
+          "lit": "false"
+        }
+      ],
+      "op": "return"
+    }
+  ],
+  "name": "contains",
+  "params": [
+    {
+      "name": "a",
+      "ptr_associated_with_new_delete": false,
+      "ptr_data_mutated": false,
+      "ptr_nullifiable": false,
+      "ptr_used_in_arithmetic": true,
+      "type": "&[u8]"
+    },
+    {
+      "name": "target",
+      "type": "i32"
+    }
+  ],
+  "return_type": "bool"
+}

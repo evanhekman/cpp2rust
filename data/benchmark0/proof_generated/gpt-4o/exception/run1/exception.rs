@@ -10,7 +10,12 @@ pub fn first_negative(v: &[i32]) -> (result: i32)
         result >= 0 ==> forall|j: int| 0 <= j && j < result as int ==> v@[j] >= 0,
         result == -1 ==> forall|j: int| 0 <= j && j < v@.len() ==> v@[j] >= 0,
 {
-    for i in 0..v.len() {
+    for i in 0..v.len()
+        invariant 
+            0 <= i as int && i as int <= v@.len(),
+            v.len() <= i32::MAX as usize,
+            forall|j: int| 0 <= j && j < i as int ==> v@[j] >= 0,
+    {
         if v[i] < 0 {
             return i as i32;
         }
@@ -19,3 +24,6 @@ pub fn first_negative(v: &[i32]) -> (result: i32)
 }
 
 } // verus!
+
+// Score: (2, 0)
+// Safe: True

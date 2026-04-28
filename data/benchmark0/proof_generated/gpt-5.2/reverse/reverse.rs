@@ -21,20 +21,16 @@ pub fn reverse(a: &mut [i32])
             lo <= n,
             hi < n,
             lo <= hi + 1,
-
-            forall|k: int|
-                0 <= k && k < lo as int ==>
-                    a@[k] == old(a)@[n as int - 1 - k],
-
-            forall|k: int|
-                hi as int < k && k < n as int ==>
-                    a@[k] == old(a)@[n as int - 1 - k],
-
+            forall|k: int| 0 <= k && k < lo as int ==> a@[k] == old(a)@[n as int - 1 - k],
+            forall|k: int| hi as int < k && k < n as int ==> a@[k] == old(a)@[n as int - 1 - k],
             forall|k: int|
                 lo as int <= k && k <= hi as int ==>
                     a@[k] == old(a)@[k],
         decreases (hi as int + 1 - lo as int)
     {
+        let old_lo = lo;
+        let old_hi = hi;
+
         let tmp = a[hi];
         a[hi] = a[lo];
         a[lo] = tmp;

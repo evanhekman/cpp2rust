@@ -1,8 +1,6 @@
 use vstd::prelude::*;
-
+fn main() {}
 verus! {
-
-#[verifier::loop_isolation(false)]
 
 pub fn first_negative(v: &[i32]) -> (result: i32)
     requires
@@ -14,22 +12,18 @@ pub fn first_negative(v: &[i32]) -> (result: i32)
 {
     for i in 0..v.len()
         invariant
-            i <= v.len(),
-            forall|j: int| 0 <= j && j < i ==> v@[j] >= 0,
+            v.len() <= i32::MAX as usize,
+            0 <= i && i <= v.len(),
+            forall|j: int| 0 <= j && j < i as int ==> v@[j] >= 0,
     {
         if v[i] < 0 {
             return i as i32;
         }
     }
-    proof {
-        assert(forall|j: int| 0 <= j && j < v@.len() ==> v@[j] >= 0);
-    }
     -1
 }
 
-fn main() {}
-
-}
+} // verus!
 
 // Score: (2, 0)
 // Safe: True

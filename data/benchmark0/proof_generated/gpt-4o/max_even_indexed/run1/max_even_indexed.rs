@@ -14,20 +14,23 @@ pub fn max_even_indexed(a: &[i32]) -> (result: i32)
     let mut i = 2usize;
     while i < a.len()
         invariant
+            0 <= i <= a.len(),
             a@.len() >= 1,
             a@.len() <= usize::MAX / 2,
-            2 <= i <= a@.len() + 1,
+            m == a@[0] 
+                || exists|k: int| (0 <= k && k < i && k % 2 == 0) && m == a@[k],
+            forall|j: int| (0 <= j && j < i && j % 2 == 0) ==> a@[j] <= m,
             i % 2 == 0,
-            forall|j: int| (0 <= j && j < i as int && j < a@.len() && j % 2 == 0) ==> a@[j] <= m,
-            exists|j: int| (0 <= j && j < i as int && j < a@.len() && j % 2 == 0) && a@[j] == m,
-        decreases (a@.len() + 1 - i as int),
+        decreases a.len() - i
     {
-        if a[i] > m { m = a[i]; }
+        if a[i] > m {
+            m = a[i];
+        }
         i += 2;
     }
     m
 }
+}
 
-} // verus!
-// Score: (2, 0)
+// Score: (0, 3)
 // Safe: True

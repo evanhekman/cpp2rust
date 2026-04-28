@@ -1,5 +1,5 @@
 use vstd::prelude::*;
-
+fn main() {}
 verus! {
 
 pub fn max_even_indexed(a: &[i32]) -> (result: i32)

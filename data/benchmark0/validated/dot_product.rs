@@ -1,5 +1,5 @@
 use vstd::prelude::*;
-
+fn main() {}
 verus! {
 
 pub open spec fn partial_dot(a: Seq<u8>, b: Seq<u8>, n: int) -> int
