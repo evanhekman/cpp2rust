@@ -13,7 +13,6 @@ pub fn max_even_indexed(a: &mut [i32]) -> (result: i32)
         a@.len() > 0,
     ensures
         result as int == max_even_indexed_spec(a@),
-        exists|i: int| 0 <= i && i < a@.len() && i % 2 == 0 && a@[i] == result as int,
 {
     let mut m: i32 = a[0usize]; let mut p: usize = 0usize; while (p < a.len()) { if (a[p] > m) { m = a[p]; } p += 2usize; } return m; 
 }

@@ -1,0 +1,3 @@
+[submodule "verus_solver"]
+	path = verus_solver
+	url = https://github.com/A2DR1/verus_solver

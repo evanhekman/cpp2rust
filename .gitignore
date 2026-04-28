@@ -6,7 +6,7 @@ target
 target-local
 verus
 verus-repo
-verus-proof-synthesis
 intermediate*
+archive
 
 !benchmark0/verus

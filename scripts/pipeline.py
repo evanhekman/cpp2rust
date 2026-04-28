@@ -30,8 +30,11 @@ CONDGEN     = REPO / "target" / "release" / "condgen"
 MAPJSON     = REPO / "target" / "release" / "map_cpp_json_to_rust_json"
 SYNTH       = REPO / "target" / "release" / "synth"
 VALIDATOR   = REPO / "target" / "release" / "transform_verus"
-VERUS       = REPO / "verus" / "verus"
-SYMBOLS     = REPO / "synthesizer" / "symbols.txt"
+VERUS            = REPO / "verus" / "verus"
+SYMBOLS          = REPO / "synthesizer" / "symbols.txt"
+VENV_PYTHON      = REPO / ".venv" / "bin" / "python"
+VERUS_SOLVER_REPO   = REPO / "verus_solver"
+VERUS_SOLVER_CONFIG = VERUS_SOLVER_REPO / "verus_solver" / "config.local.yaml"
 
 # Load .env once at startup so subprocesses (e.g. condgen) inherit API keys.
 _env_file = REPO / ".env"
@@ -160,9 +163,30 @@ def stage_synthesize(json_file: Path, prepost_file: Path, stitched_file: Path) -
 
 
 def stage_validate(stitched_file: Path, validated_file: Path) -> tuple[bool, str, float]:
-    """Stitched Rust → Verified Rust. TODO: wire up correct validator."""
+    """Stitched Rust → Verified Rust via verus_solver."""
     validated_file.parent.mkdir(parents=True, exist_ok=True)
-    return False, "validator not yet wired up", 0.0
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(VERUS_SOLVER_REPO)
+    env_file = VERUS_SOLVER_REPO / ".env"
+    if env_file.exists():
+        for line in env_file.read_text().splitlines():
+            line = line.strip()
+            if "=" in line and not line.startswith("#"):
+                k, _, v = line.partition("=")
+                env[k.strip()] = v.strip().strip('"').strip("'")
+    cmd = [
+        str(VENV_PYTHON), "-m", "verus_solver.cli", "solve",
+        str(stitched_file),
+        "--out", str(validated_file),
+        "--config", str(VERUS_SOLVER_CONFIG),
+    ]
+    ok, out, elapsed = _run(cmd, cwd=str(VERUS_SOLVER_REPO), timeout=600)
+    try:
+        result = json.loads(out.strip().splitlines()[-1])
+        ok = bool(result.get("success"))
+    except Exception:
+        pass
+    return ok, out, elapsed
 
 
 # ---------------------------------------------------------------------------

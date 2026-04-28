@@ -6,7 +6,7 @@ pub fn reverse(a: &mut [i32]) -> (result: ())
     requires
 
     ensures
-        a@ == old(a)@.reversed(),
+        a@ == old(a)@.reverse(),
 {
     assume(false);
 }
