@@ -10,3 +10,4 @@ intermediate*
 archive
 
 !benchmark0/verus
+verus_solver_runs*

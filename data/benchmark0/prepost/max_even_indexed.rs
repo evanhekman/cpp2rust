@@ -13,6 +13,7 @@ pub fn max_even_indexed(a: &mut [i32]) -> (result: i32)
         a@.len() > 0,
     ensures
         result as int == max_even_indexed_spec(a@),
+        a@ == old(a)@,
 {
     assume(false);
 }

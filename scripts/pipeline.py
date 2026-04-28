@@ -181,9 +181,14 @@ def stage_validate(stitched_file: Path, validated_file: Path) -> tuple[bool, str
         "--config", str(VERUS_SOLVER_CONFIG),
     ]
     ok, out, elapsed = _run(cmd, cwd=str(VERUS_SOLVER_REPO), timeout=600)
+    ok = False
     try:
-        result = json.loads(out.strip().splitlines()[-1])
-        ok = bool(result.get("success"))
+        # CLI prints a JSON block to stdout; find it by locating the last {...}
+        stdout_only = out  # _run combines stdout+stderr, but JSON is on stdout
+        brace = stdout_only.rfind("{")
+        if brace != -1:
+            result = json.loads(stdout_only[brace:])
+            ok = bool(result.get("success"))
     except Exception:
         pass
     return ok, out, elapsed
