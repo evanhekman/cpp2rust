@@ -1,0 +1,165 @@
+{
+  "ast": [
+    {
+      "args": [
+        {
+          "type": "i32",
+          "var": "lo"
+        },
+        {
+          "lit": "0"
+        }
+      ],
+      "op": "let"
+    },
+    {
+      "body": [
+        {
+          "args": [
+            {
+              "type": "i32",
+              "var": "mid"
+            },
+            {
+              "args": [
+                {
+                  "var": "lo"
+                },
+                {
+                  "args": [
+                    {
+                      "args": [
+                        {
+                          "var": "hi"
+                        },
+                        {
+                          "var": "lo"
+                        }
+                      ],
+                      "op": "-"
+                    },
+                    {
+                      "lit": "2"
+                    }
+                  ],
+                  "op": "/"
+                }
+              ],
+              "op": "+"
+            }
+          ],
+          "op": "let"
+        },
+        {
+          "condition": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a"
+                  },
+                  {
+                    "var": "mid"
+                  }
+                ],
+                "op": "[]"
+              },
+              {
+                "var": "target"
+              }
+            ],
+            "op": "=="
+          },
+          "then": [
+            {
+              "args": [
+                {
+                  "lit": "true"
+                }
+              ],
+              "op": "return"
+            }
+          ]
+        },
+        {
+          "condition": {
+            "args": [
+              {
+                "args": [
+                  {
+                    "var": "a"
+                  },
+                  {
+                    "var": "mid"
+                  }
+                ],
+                "op": "[]"
+              },
+              {
+                "var": "target"
+              }
+            ],
+            "op": "<"
+          },
+          "else": [],
+          "then": [
+            {
+              "args": [
+                {
+                  "var": "lo"
+                },
+                {
+                  "args": [
+                    {
+                      "var": "mid"
+                    },
+                    {
+                      "lit": "1"
+                    }
+                  ],
+                  "op": "+"
+                }
+              ],
+              "op": "="
+            }
+          ]
+        }
+      ],
+      "condition": {
+        "args": [
+          {
+            "var": "lo"
+          },
+          {
+            "var": "hi"
+          }
+        ],
+        "op": "<="
+      }
+    },
+    {
+      "args": [
+        {
+          "lit": "false"
+        }
+      ],
+      "op": "return"
+    }
+  ],
+  "name": "binary_search",
+  "params": [
+    {
+      "name": "a",
+      "ptr_associated_with_new_delete": false,
+      "ptr_data_mutated": false,
+      "ptr_nullifiable": false,
+      "ptr_used_in_arithmetic": true,
+      "type": "&[i32]"
+    },
+    {
+      "name": "target",
+      "type": "i32"
+    }
+  ],
+  "return_type": "bool"
+}

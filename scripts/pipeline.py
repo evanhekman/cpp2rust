@@ -91,7 +91,8 @@ def stage_preprocess(cpp_file: Path, out_json: Path) -> tuple[bool, str, float]:
         tmp.unlink(missing_ok=True)
 
 
-def stage_synthesize(json_file: Path, prepost_file: Path, stitched_file: Path) -> tuple[bool, str, float]:
+def stage_synthesize(json_file: Path, prepost_file: Path, stitched_file: Path,
+                     disabled_heuristics: list[str] | None = None) -> tuple[bool, str, float]:
     """
     processed JSON → stitched Rust (synth body + validator splice).
     Returns ok=True only if synthesis found a solution AND stitching succeeded.
@@ -99,8 +100,11 @@ def stage_synthesize(json_file: Path, prepost_file: Path, stitched_file: Path) -
     t0 = time.perf_counter()
 
     # Run synth, capture stdout.
+    cmd = [str(SYNTH), "--file", str(json_file), "--symbols", str(SYMBOLS)]
+    for h in (disabled_heuristics or []):
+        cmd += ["--disable-heuristic", h]
     r = subprocess.run(
-        [str(SYNTH), "--file", str(json_file), "--symbols", str(SYMBOLS)],
+        cmd,
         capture_output=True, text=True, timeout=300,
     )
     synth_elapsed = time.perf_counter() - t0
@@ -190,7 +194,8 @@ def stage_verify(stitched_file: Path, validated_file: Path) -> tuple[bool, str, 
 # Main
 # ---------------------------------------------------------------------------
 
-def run_pipeline(bench: str, targets: list[str], verbose: bool = False):
+def run_pipeline(bench: str, targets: list[str], verbose: bool = False,
+                 disabled_heuristics: list[str] | None = None):
     data = REPO / "data" / bench
     cpp_dir     = data / "cpp"
     prepost_dir = data / "prepost"
@@ -241,7 +246,8 @@ def run_pipeline(bench: str, targets: list[str], verbose: bool = False):
 
         # Stage 2: Synthesize + Stitch
         if ok1:
-            ok2, out2, t2 = stage_synthesize(json_file, prepost_file, stitched_file)
+            ok2, out2, t2 = stage_synthesize(json_file, prepost_file, stitched_file,
+                                             disabled_heuristics=disabled_heuristics)
         else:
             ok2, out2, t2 = None, "", None
         row["synthesize"] = (ok2, t2)
@@ -291,8 +297,12 @@ def main():
     ap.add_argument("--bench", default="benchmark0", help="benchmark directory under data/")
     ap.add_argument("--targets", nargs="*", default=[], help="specific targets (default: all)")
     ap.add_argument("--verbose", "-v", action="store_true", help="print stage output on failure")
+    ap.add_argument("--disable-heuristic", dest="disabled_heuristics", action="append",
+                    default=[], metavar="NAME",
+                    help="disable a synth heuristic (repeatable); e.g. --disable-heuristic absent")
     args = ap.parse_args()
-    run_pipeline(args.bench, args.targets, args.verbose)
+    run_pipeline(args.bench, args.targets, args.verbose,
+                 disabled_heuristics=args.disabled_heuristics or None)
 
 
 if __name__ == "__main__":

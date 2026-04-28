@@ -9,31 +9,26 @@ pub fn reverse(a: &mut Vec<i32>)
         a@.len() == old(a)@.len(),
         forall|k: int| 0 <= k && k < a@.len() ==> a@[k] == old(a)@[a@.len() - 1 - k],
 {
-    let n = a.len();
-    if n <= 1 {
-        return;
-    }
-    
-    let mut lo: usize = 0;
-    let mut hi: usize = n - 1;
     let ghost old_a = a@;
+    let len = a.len();
+    let mut lo: usize = 0;
+    let mut hi: usize = len - 1;
     
     while lo < hi
         invariant
-            lo <= hi + 1,
-            lo <= n,
-            hi < n,
-            a.len() == n,
-            n == old_a.len(),
-            lo as int + hi as int == n as int - 1,
-            forall|k: int| #![auto] 0 <= k < lo ==> a@[k] == old_a[n as int - 1 - k],
-            forall|k: int| #![auto] hi < k < n ==> a@[k] == old_a[n as int - 1 - k],
-            forall|k: int| #![auto] lo <= k <= hi ==> a@[k] == old_a[k],
+            0 <= lo,
+            lo + hi == len - 1,
+            hi < len,
+            a@.len() == len,
+            len == old_a.len(),
+            forall|k: int| lo <= k && k <= hi ==> a@[k] == old_a[k],
+            forall|k: int| 0 <= k && k < lo ==> a@[k] == old_a[len - 1 - k],
+            forall|k: int| hi < k && k < len ==> a@[k] == old_a[len - 1 - k],
     {
-        let tmp = a[lo];
-        a.set(lo, a[hi]);
-        a.set(hi, tmp);
-        
+        let tmp_lo: i32 = a[lo];
+        let tmp_hi: i32 = a[hi];
+        a.set(lo, tmp_hi);
+        a.set(hi, tmp_lo);
         lo = lo + 1;
         hi = hi - 1;
     }

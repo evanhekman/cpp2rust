@@ -1,0 +1,81 @@
+{
+  "ast": [
+    {
+      "body": [
+        {
+          "args": [
+            {
+              "type": "i32",
+              "var": "t"
+            },
+            {
+              "var": "b"
+            }
+          ],
+          "op": "let"
+        },
+        {
+          "args": [
+            {
+              "var": "b"
+            },
+            {
+              "args": [
+                {
+                  "var": "a"
+                },
+                {
+                  "var": "b"
+                }
+              ],
+              "op": "%"
+            }
+          ],
+          "op": "="
+        },
+        {
+          "args": [
+            {
+              "var": "a"
+            },
+            {
+              "var": "t"
+            }
+          ],
+          "op": "="
+        }
+      ],
+      "condition": {
+        "args": [
+          {
+            "var": "b"
+          },
+          {
+            "lit": "0"
+          }
+        ],
+        "op": "!="
+      }
+    },
+    {
+      "args": [
+        {
+          "var": "a"
+        }
+      ],
+      "op": "return"
+    }
+  ],
+  "name": "gcd",
+  "params": [
+    {
+      "name": "a",
+      "type": "i32"
+    },
+    {
+      "name": "b",
+      "type": "i32"
+    }
+  ],
+  "return_type": "i32"
+}
